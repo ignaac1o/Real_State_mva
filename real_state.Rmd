@@ -19,7 +19,7 @@ str(dataset)
 
 ```
 
-Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
+Next step is to convert the type of the categorical variable _CHAS_ into factor (no bounds, bounds) and create a few categorical variables from suitable quantitative ones:
 
 - _RAD.CAT_: low, medium and high
 - _RM.CAT_: low, medium and high
@@ -29,7 +29,7 @@ Next step is to convert the type of the categorical variable _CHAS_ into factor 
 
 ```{r}
 
-dataset$CHAS <- as.factor(dataset$CHAS)
+dataset$CHAS <- factor(dataset$CHAS, labels=c("no bounds", "bounds"))
 
 factor_rad_values <- sort(unique(dataset$RAD))
 delimiter_rad_index <- length(factor_rad_values)/3
@@ -68,6 +68,105 @@ dataset$ZN.CAT <- cut(dataset$ZN,
     right = FALSE)
 
 str(dataset)
+
+```
+
+We are going to define a method to generate the kernel plots: withouth any categorical variable and groupped by one qualitative:
+
+```{r}
+
+if (!require(RColorBrewer)) install.packages("RColorBrewer")
+library(RColorBrewer)
+
+kernel_by_factors <- function(x, x_name, type_color) {
+  factors <- Filter(is.factor, dataset)
+  num_vars <- ncol(factors)
+  mod <- num_vars %% 2 
+  
+  colors = brewer.pal(n = num_vars + 1, name=type_color)
+
+  par(mfrow=c(num_vars+mod+1,2), mar=c(2,2,2,2))
+  plot(density(x,kernel="gaussian"),
+   ylab="Density",
+   main=paste0("Kernel density of ", x_name),
+   xlab=x_name,
+   col=colors[1],
+   lwd=5)
+  
+  index_factor <- 1
+  for(factor in factors) {
+    plot_kernel_charts(x, factor[!is.na(factor)], x_name, names(factors[index_factor]), colors)
+    index_factor = index_factor + 1
+  }
+}
+
+plot_kernel_charts <- function(x, cat, x_name, cat_name, colors) {
+  cat_values <- levels(cat)
+  num_colors <- length(cat_values)
+  
+  min_x <<- c()
+  max_x <<- c()
+  min_y <<- c()
+  max_y <<- c()
+  
+  densities <<- list()
+  
+  for(cat_value in cat_values)
+    generate_kernel_by_cat_value(x, cat, cat_value)
+  
+  min_x <- min(min_x)
+  max_x <- max(max_x)
+  min_y <- min(min_y)
+  max_y <- max(max_y)
+  
+  plot(c(min_x,max_x),c(min_y,max_y),
+       xlab=x_name,
+       ylab="Density",
+       main=paste0("Kernel: ", x_name, " in terms of ", cat_name),
+       type="n")
+  legend(x="topright", legend=c(cat_values),col=colors[-1], lty=1, cex=0.8,
+     box.lty=0)
+  i <- 2
+  for(densitiy_by_cat in densities) {
+    lines(densitiy_by_cat$x, densitiy_by_cat$y, col=colors[i], lwd=1)
+    i = i + 1
+  }
+}
+
+generate_kernel_by_cat_value <- function(x, cat, cat_value){
+  if(length(cat[cat==cat_value]) > 2){
+    d_cat_value <- density(x[cat==cat_value], kernel="gaussian")
+    min_x <<- c(min_x, min(d_cat_value$x))
+    max_x <<- c(max_x, max(d_cat_value$x))
+    min_y <<- c(min_y, min(d_cat_value$y))
+    max_y <<- c(max_y, max(d_cat_value$y))
+    
+    densities <<- append(densities, list(d_cat_value))
+  }
+}
+
+```
+
+Calling the method above with the parameters of interest: _TAX_, _MEDV_, _CRIM_ and _NOX_
+
+```{r fig.height=14}
+kernel_by_factors(dataset$TAX, "TAX", "Set1")
+kernel_by_factors(dataset$MEDV, "MEDV", "Dark2")
+kernel_by_factors(dataset$CRIM, "CRIM", "Paired")
+kernel_by_factors(dataset$NOX, "NOX", "Accent")
+```
+We are going to visualize the matrix correlation between each variable:
+
+```{r}
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(GGally)) install.packages("GGally")
+library(ggplot2)
+library(GGally)
+
+is.not.fact <- sapply(dataset, Negate(is.factor))
+dataset.no.factors <- dataset[,is.not.fact]
+ggpairs(dataset.no.factors[,c(1:6)], title="Pairwise 1-6 variable correlation")
+ggpairs(dataset.no.factors[,c(7:13)], title="Pairwise 7-13 variable correlation")
 
 ```
 
