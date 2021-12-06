@@ -72,3 +72,53 @@ str(dataset)
 ```
 
 
+
+I'm going to try to find differences in shapes between the different levels of a predictor and the variable that we want to predict, the average price.
+
+
+
+```{r}
+pairs(data=dataset,~CRIM+ZN+INDUS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO+B+LSTAT+MEDV,pch=19,col=dataset$CHAS)
+```
+
+Within this plot we can see that there is a linear relationship between (NOX,DIS) and (LSTAT,MEDV)
+
+Now, lets try to find groups through scatter plots.
+```{r}
+ggplot(data=dataset,aes(x=NOX,y=DIS))+geom_point(aes(colour=ZN.CAT))
+
+ggplot(data=dataset,aes(y=MEDV,x=LSTAT))+geom_point(aes(colour=LSTAT.CAT))
+```
+
+Density curves
+
+```{r}
+#Given river
+dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=CHAS))
+
+#Given rooms
+dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=RM.CAT,fill=RM.CAT))
+
+dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=LSTAT.CAT))
+
+dataset %>% ggplot(aes(x=NOX)) + geom_density(aes(color=ZN.CAT))
+```
+
+PCP plot
+
+```{r}
+color_rad_cat=c("blue","green","orange2")[dataset$RAD.CAT]
+parcoord(dataset[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
+```
+We can see that for high RAD.CAT the variables more affected are CRIM, AGE and DIS
+
+ANDREWS curve
+
+```{r}
+library(andrews)
+par(mfrow=c(1,1))
+andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset$CHAS)),clr=8,ymax=4)
+```
+
+
+
