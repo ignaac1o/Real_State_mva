@@ -2,10 +2,73 @@
 title: "Real_state"
 author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
 date: "12/4/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+First of all, we are going to read the Boston house prices dataset file and show the summary and the structure:
+
+```{r}
+dataset <- read.csv("Dataset.csv")
+
+summary(dataset)
+str(dataset)
+
+```
+
+Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
+
+- _RAD.CAT_: low, medium and high
+- _RM.CAT_: low, medium and high
+- _INDUS.CAT_: very low, low, high and very high
+- _LSTAT.CAT_: very low, low, high and very high
+- _ZN.CAT_: very low, low, high and very high
+
+```{r}
+
+dataset$CHAS <- as.factor(dataset$CHAS)
+
+factor_rad_values <- sort(unique(dataset$RAD))
+delimiter_rad_index <- length(factor_rad_values)/3
+lower_delimiter_rad_value <- factor_rad_values[round(delimiter_rad_index)]
+upper_delimiter_rad_value <- factor_rad_values[round(2*delimiter_rad_index)]
+
+dataset$RAD.CAT <- cut(dataset$RAD, 
+    breaks = c(-Inf, lower_delimiter_rad_value, upper_delimiter_rad_value, Inf), 
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
+
+dataset$RM.CAT <- cut(dataset$RM, 
+    breaks = c(-Inf, 4, 6, Inf), 
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
+
+factor_indus_values <- sort(unique(dataset$INDUS))
+delimiter_indus_index <- length(factor_indus_values)/4
+lower_delimiter_indus_value <- factor_indus_values[round(delimiter_indus_index)]
+mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
+upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
+
+dataset$INDUS.CAT <- cut(dataset$INDUS, 
+    breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value, upper_delimiter_indus_value, Inf), 
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+dataset$LSTAT.CAT <- cut(dataset$LSTAT, 
+    breaks = c(-Inf, 25, 50, 75, Inf), 
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+dataset$ZN.CAT <- cut(dataset$ZN, 
+    breaks = c(-Inf, 25, 50, 75, Inf), 
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+str(dataset)
+
+```
+
 

@@ -30,7 +30,7 @@ Attribute Information:
 
 12- B 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town
 
-13- LSTAT % lower status of the population
+13- LSTAT % lower status of the population (proportion of adults without, some high school education and proportion of male workers classified as laborers)
 
 14- MEDV Median value of owner-occupied homes in $1000's
 
