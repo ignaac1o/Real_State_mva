@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 First of all, we are going to read the Boston house prices dataset file and show the summary and the structure:
 
 ```{r}
+library(ggplot2)
+library(dplyr)
+library(MASS)
 dataset <- read.csv("Dataset.csv")
 
 summary(dataset)
