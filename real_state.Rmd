@@ -123,5 +123,53 @@ par(mfrow=c(1,1))
 andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset$CHAS)),clr=8,ymax=4)
 ```
 
+###############################3
+
+Checking for NA
+
+```{r}
+missingValues=function(data){
+  count=0
+  a=cbind(lapply(lapply(data, is.na), sum))
+  for(i in 1:ncol(data)){
+    if(a[i]!=0){
+      cat(as.integer(a[i]), "missing values in column ", i,"\n" )
+      count=count+1
+    }
+  }  
+    if(count==0){
+      cat("There are No missing values in this dataset")
+    }
+}
+
+missingValues(dataset)
+```
+
+Impute NA
+
+```{r}
+#With the mean
+clean_data_mean=dataset
+index=which(is.na(dataset$RM))
+clean_data_mean$RM[index]=mean(clean_data_mean$RM,na.rm = TRUE)
+clean_data_mean$RM[index]
+
+#Using mice library
+library(mice)
+methods(mice)
+imputation=mice(dataset,m=5,method="pmm",maxit = 20)
+
+#Check each prediction
+imputation$imp$RM
+
+#We want to check something close to the mean value 6.288 so we are going to take the first prediction, because it has an error lower than 0.5 on each boundary
+summary(dataset$RM)
+
+for(i in 1:5){
+    print(imputation$imp$RM[i]-clean_data_mean$RM[index])
+}
+
+clean_data=complete(imputation,1)
+```
 
 
