@@ -29,45 +29,47 @@ Next step is to convert the type of the categorical variable _CHAS_ into factor 
 
 ```{r}
 
-dataset$CHAS <- factor(dataset$CHAS, labels=c("no bounds", "bounds"))
+dataset.with.categories <- dataset
 
-factor_rad_values <- sort(unique(dataset$RAD))
+dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS, labels=c("no bounds", "bounds"))
+
+factor_rad_values <- sort(unique(dataset.with.categories$RAD))
 delimiter_rad_index <- length(factor_rad_values)/3
 lower_delimiter_rad_value <- factor_rad_values[round(delimiter_rad_index)]
 upper_delimiter_rad_value <- factor_rad_values[round(2*delimiter_rad_index)]
 
-dataset$RAD.CAT <- cut(dataset$RAD, 
+dataset.with.categories$RAD.CAT <- cut(dataset.with.categories$RAD, 
     breaks = c(-Inf, lower_delimiter_rad_value, upper_delimiter_rad_value, Inf), 
     labels = c('low', 'medium', 'high'),
     right = FALSE)
 
-dataset$RM.CAT <- cut(dataset$RM, 
+dataset.with.categories$RM.CAT <- cut(dataset.with.categories$RM, 
     breaks = c(-Inf, 4, 6, Inf), 
     labels = c('low', 'medium', 'high'),
     right = FALSE)
 
-factor_indus_values <- sort(unique(dataset$INDUS))
+factor_indus_values <- sort(unique(dataset.with.categories$INDUS))
 delimiter_indus_index <- length(factor_indus_values)/4
 lower_delimiter_indus_value <- factor_indus_values[round(delimiter_indus_index)]
 mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
 upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
 
-dataset$INDUS.CAT <- cut(dataset$INDUS, 
+dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS, 
     breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value, upper_delimiter_indus_value, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
-dataset$LSTAT.CAT <- cut(dataset$LSTAT, 
+dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT, 
     breaks = c(-Inf, 25, 50, 75, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
-dataset$ZN.CAT <- cut(dataset$ZN, 
+dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN, 
     breaks = c(-Inf, 25, 50, 75, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
-str(dataset)
+str(dataset.with.categories)
 
 ```
 
@@ -150,19 +152,19 @@ generate_kernel_by_cat_value <- function(x, cat, cat_value){
 Calling the method above with the parameters of interest: _TAX_, _MEDV_, _CRIM_ and _NOX_
 
 ```{r fig.height=14}
-kernel_by_factors(dataset$TAX, "TAX", "Set1")
+kernel_by_factors(dataset.with.categories$TAX, "TAX", "Set1")
 ```
 
 ```{r fig.height=14}
-kernel_by_factors(dataset$MEDV, "MEDV", "Dark2")
+kernel_by_factors(dataset.with.categories$MEDV, "MEDV", "Dark2")
 ```
 
 ```{r fig.height=14}
-kernel_by_factors(dataset$CRIM, "CRIM", "Paired")
+kernel_by_factors(dataset.with.categories$CRIM, "CRIM", "Paired")
 ```
 
 ```{r fig.height=14}
-kernel_by_factors(dataset$NOX, "NOX", "Accent")
+kernel_by_factors(dataset.with.categories$NOX, "NOX", "Accent")
 ```
 
 We are going to visualize the matrix correlation between each variable:
@@ -173,12 +175,40 @@ if (!require(GGally)) install.packages("GGally")
 library(ggplot2)
 library(GGally)
 
-is.not.fact <- sapply(dataset, Negate(is.factor))
-dataset.no.factors <- dataset[,is.not.fact]
+is.not.fact <- sapply(dataset.with.categories, Negate(is.factor))
+dataset.no.factors <- dataset.with.categories[,is.not.fact]
 ggpairs(dataset.no.factors, title="Pairwise variable correlation")
 
 ```
 
 # Outliers
+
+The next step is about analyzing the outliers present in the dataset. Then, we are going to use the _Mahalanobis_ distance which plays an important role in outlier detection using the _Minimum Covariance Determinant_ (MCD) which is based on this distance. This functionality is provided by the package _rrcov_. 
+
+First, we are going to calculate the estimators:
+
+```{r}
+if (!require(RColorBrewer)) install.packages("RColorBrewer")
+library(rrcov)
+
+mcd.estimators <- CovMcd(dataset,alpha=0.85,nsamp="deterministic")
+mean.mcd.estimators <- mcd.estimators$center
+covariance.mcd.estimators <- mcd.estimators$cov
+correlation.mcd.estimators <- cov2cor(covariance.mcd.estimators)
+
+```
+
+The _Mahalanobis_ distance calculated using the MCD procedure is:
+
+```{r}
+colors = brewer.pal(n=2, name="Dark2")
+n <- nrow(dataset)
+p <- ncol(dataset)
+x.sq.mah.mcd <- mcd.estimators$mah
+var.outliers.mah.mcd <- rep(colors[1], n)
+outliers.mah.mcd <- which(x.sq.mah.mcd > qchisq(.99, p))
+var.outliers.mah.mcd[outliers.mah.mcd] <- colors[2]
+
+```
 
 
