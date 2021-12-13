@@ -151,13 +151,23 @@ Calling the method above with the parameters of interest: _TAX_, _MEDV_, _CRIM_ 
 
 ```{r fig.height=14}
 kernel_by_factors(dataset$TAX, "TAX", "Set1")
+```
+
+```{r fig.height=14}
 kernel_by_factors(dataset$MEDV, "MEDV", "Dark2")
+```
+
+```{r fig.height=14}
 kernel_by_factors(dataset$CRIM, "CRIM", "Paired")
+```
+
+```{r fig.height=14}
 kernel_by_factors(dataset$NOX, "NOX", "Accent")
 ```
+
 We are going to visualize the matrix correlation between each variable:
 
-```{r}
+```{r fig.width=14, fig.height=14}
 if (!require(ggplot2)) install.packages("ggplot2")
 if (!require(GGally)) install.packages("GGally")
 library(ggplot2)
@@ -165,9 +175,10 @@ library(GGally)
 
 is.not.fact <- sapply(dataset, Negate(is.factor))
 dataset.no.factors <- dataset[,is.not.fact]
-ggpairs(dataset.no.factors[,c(1:6)], title="Pairwise 1-6 variable correlation")
-ggpairs(dataset.no.factors[,c(7:13)], title="Pairwise 7-13 variable correlation")
+ggpairs(dataset.no.factors, title="Pairwise variable correlation")
 
 ```
+
+# Outliers
 
 
