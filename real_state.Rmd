@@ -398,7 +398,7 @@ for(i in 1:5){
 Looks like in this case, the second prediction is the best one, as the higher value for the error is 0.25. Therefore, we choose this prediction to compute our missing values.
 
 ```{r, warning=FALSE}
-clean_data=complete(imputation,1)
+clean_data=complete(imputation,2)
 ```
 
 ## Outliers
