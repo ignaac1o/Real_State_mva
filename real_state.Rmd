@@ -9,13 +9,13 @@ header-includes:
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
-```{r,warning=FALSE}
+```{r}
 library(ggplot2)
 library(dplyr)
 library(MASS)
