@@ -229,15 +229,7 @@ par(mfrow=c(1,1))
 andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
 ```
 
-### Interpretation of correlation matrix
-
-```{r}
-knitr::kable(R_quan, caption="Correlation Matrix: total classes")
-knitr::kable(R_LSTAT_lc, caption="Correlation Matrix: lower class")
-knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
-```
-
-We have realized that there are a few outliers in the dataset, this is represented as an isolated line.
+We have realized that there are a few outliers in the dataset, this is represented as an isolated line. Let's talk later on about this topic.
 
 ## Characteristics of the quantitative variables
 
