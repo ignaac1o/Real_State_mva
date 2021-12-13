@@ -311,7 +311,7 @@ R_LSTAT_lc <- cor(X_LSTAT_lc)
 ```{r}
 mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
 rownames(mean_vector_comp) <- c("Total Classes", "Lower Class", "Medium-High Class")
-knitr::kable(mean_vector_comp)
+knitr::kable(mean_vector_comp, caption="Mean vector")
 ```
 
 According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of 
@@ -319,17 +319,17 @@ According to the plots seen before, we can see that the mean of the observations
 ### Interpretation of covariance matrix
 
 ```{r}
-S_quan
-S_LSTAT_mhc
-S_LSTAT_lc
+knitr::kable(S_quan, caption="Covariance Matrix: total classes")
+knitr::kable(S_LSTAT_lc, caption="Covariance Matrix: lower class")
+knitr::kable(S_LSTAT_mhc, caption="Covariance Matrix: medium high classes")
 ```
 
 ### Interpretation of correlation matrix
 
 ```{r}
-R_quan
-R_LSTAT_mhc
-R_LSTAT_lc
+knitr::kable(R_quan, caption="Correlation Matrix: total classes")
+knitr::kable(R_LSTAT_lc, caption="Correlation Matrix: lower class")
+knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
 ```
 
 ## Outliers
