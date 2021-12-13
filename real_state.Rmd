@@ -232,9 +232,9 @@ We have realized that there are a few outliers in the dataset, this is represent
 
 ## Second step
 
-The goal of this step is the estimation of the main characteristics of the quantitative variables. After the transformation of some of quantitatives attributes in cathegorical variables, our dataset contains four continuous variables: *MEDV*, *TAX*, *NOX* and *CRIME*. 
+The goal of this step is the estimation of the main characteristics of the quantitative variables. After the aggregation of some continuous variables, our dataset finally contains four continuous variables: *MEDV*, *TAX*, *NOX* and *CRIME*. 
 
-We have to consider our data come from an homogeneous population. As we have seen in the previous step, exploratory analysis has suggested that we can divide data in different groups. Hence, in order to check this assumption we will do inference over data estimating the mean vector, covariance matrix and correlation matrix. Therefore, we will be able to state each group formed belongs to a different population separately.
+We have to consider that our data come from an homogeneous population. As we have seen in the previous step, exploratory analysis has suggested that we can split data in different groups. Hence, in order to check this assumption we will do inference over data estimating the mean vector, covariance matrix and correlation matrix. Therefore, we will be able to state each group formed belongs to a different population separately.
 
 The dataset is located in the scenario where there are more observations than variables (i.e. $n > p$, where $n$ is the number of observations which the dataset contains and $p$ the number of attributes). Thus, we will use the following expressions to compute the different estimations for a dataset with $n$ observations and $p$ variables:
 
@@ -247,7 +247,8 @@ $$
  \bar{x}_{2} \\
  \vdots\\
  \bar{x}_{p}
-\end{pmatrix}$$
+\end{pmatrix}
+$$
 
  - Estimation of $\sum$ as $E[S] = \sum$, where $S$ is the covariance matrix of $x = ({x}_{1},..., {x}_{p})^{T}$ and it is obtained as following:
 
@@ -258,7 +259,8 @@ $$
  {s}_{21}^{2}&{s}_{2}^{2}&...&{s}_{2p}^{2}\\
  \vdots & \ddots & \ddots & \vdots \\
  {s}_{n1}^{2}&{s}_{n2}^{2}&...&{s}_{p}^{2}
-\end{pmatrix}$$
+\end{pmatrix}
+$$
 
 where ${s}_{p}^{2}$ is the sample variance of $x_j$ and ${s}_{jk}^{2}$ is the sample covariance bewteen $x_j$ and $x_k$ with $j\neq	k$.
 
@@ -277,20 +279,10 @@ $$
 knowing that ${r}_{jk}$ with $j\neq	k$ is computed with expression ${r}_{jk} = \frac{{s}_{jk}}{{s}_{j}{s}_{k}}$ which is the sample correlation coefficient between $x_j$ and $x_k$.
 
 
-In view of the conclusions which we have obtained in analysis step, we will compute the previous expressions. We have identified a group formed by the cualitative variable *LSTAT.CAT* and the four quantitative attributes left, as we consider any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
-
+From the conclusions obtained  in the  analysis step, we will compute the previous expressions. We have identified a group formed by the qualitative variable *LSTAT.CAT* and the four quantitative attributes left, as we consider that any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
 
 ```{r}
-if (!require("corrplot")) install.packages("corrplot")
-library("corrplot")
-if (!require("dplyr")) install.packages("dpylr")
-library(dplyr)
-#####################################################################
-
-X <- read.csv("Dataset.csv")
-
-# Select quantitative variables
-X_quan = X %>% select(TAX, MEDV, CRIM, NOX)
+X_quan = dataset.with.categories %>% dplyr::select(TAX, MEDV, CRIM, NOX)
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION FOR QUANTITATIVE VARIABLES
 m_quan <- colMeans(X_quan)
@@ -299,22 +291,21 @@ R_quan <- cor(X_quan)
 
 # LSTAT - QUATITATIVE VARIABLES
 # LSTAT: Two possibles categories 
-
-X_LSTAT_verylow <- X_quan[X$LSTAT <= 25,]
-X_LSTAT_low <- X_quan[X$LSTAT >= 25,]
+X_LSTAT_mhc <- X_quan[dataset.with.categories$LSTAT.CAT =="Medium-High-class",]
+X_LSTAT_lc <- X_quan[dataset.with.categories$LSTAT.CAT =="Low-class",]
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= VERY LOW
-m_LSTAT_verylow <- colMeans(X_LSTAT_verylow)
-S_LSTAT_verylow <- cov(X_LSTAT_verylow)
-R_LSTAT_verylow <- cor(X_LSTAT_verylow)
+m_LSTAT_mhc <- colMeans(X_LSTAT_mhc)
+S_LSTAT_mhc <- cov(X_LSTAT_mhc)
+R_LSTAT_mhc <- cor(X_LSTAT_mhc)
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= LOW
 m_LSTAT_low <- colMeans(X_LSTAT_low)
 S_LSTAT_low <- cov(X_LSTAT_low)
 R_LSTAT_low <- cor(X_LSTAT_low)
-
 ```
-## Interpretation of mean vector
+
+### Interpretation of mean vector
 
 ```{r}
 m_quan
@@ -322,7 +313,7 @@ m_LSTAT_low
 m_LSTAT_verylow
 ```
 
-We can see the mean of the observations in which class *LSTAT* is 0 is lower than those observations which belong to the other class to the variable *MEDV*. It means that an upper percentage of 
+According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of 
 
 
 ## Outliers
