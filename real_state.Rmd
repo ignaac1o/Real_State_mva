@@ -26,6 +26,7 @@ library(corrplot)
 library(rrcov)
 library(mice)
 
+
 dataset <- read.csv("Dataset.csv")
 ```
 
@@ -49,7 +50,6 @@ This dataset has been taken from [Kaggle](https://www.kaggle.com/c/boston-housin
 - _MEDV_: Continuous variable with the median value price of owner-occupied homes in $1000's
 
 Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
-
 
 - _RAD.CAT_: low, medium and high
 - _RM.CAT_: low, medium and high
@@ -229,6 +229,14 @@ par(mfrow=c(1,1))
 andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
 ```
 
+### Interpretation of correlation matrix
+
+```{r}
+knitr::kable(R_quan, caption="Correlation Matrix: total classes")
+knitr::kable(R_LSTAT_lc, caption="Correlation Matrix: lower class")
+knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
+```
+
 We have realized that there are a few outliers in the dataset, this is represented as an isolated line.
 
 ## Characteristics of the quantitative variables
@@ -333,9 +341,17 @@ knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
 ```
 
 
-## Imput missing data
+## Imputation of missing values
 
-Checking for NA
+Missing values are a very frequent problem that appears in almost every dataset. Therefore, it is important to know how to deal with them.
+
+There are several ways to impute missing values. One of the easiest is based on deleting all the observations that contains missing values. This could work if your dataset is very long and you do not have many NA, otherwise you will be deleting too much information. However, in practice, this is not a very common solution to deal with missing values.
+
+Another very popular solution is to replace all the missing values with the sample mean, sample median or sample mode, as these values are "close" to what could be expected for them. Nevertheless, this practice could be very dangerous in some cases. Imagine for example a binary variable, if we used the mean value to replace NAs it will give a value in between 1-0, which is not going to be a useful replacement.
+
+There are other methods to impute missing values that are based on predictions, which tempt to be the most efficient. Therefore, we will use them if needed. 
+
+First of all, we are going to build a function that summarizes if there are any NA in our dataset. 
 
 ```{r, warning=FALSE}
 missingValues=function(data){
@@ -355,31 +371,41 @@ missingValues=function(data){
 missingValues(dataset)
 ```
 
-Impute NA
+We found that there are 5 missing values in the variable RM. In order to impute them, we are going to see different methods.
+
+First of all we are going to see how would it look to replace our missing values with the mean value of the variable.
 
 ```{r, warning=FALSE}
-#With the mean
 clean_data_mean=dataset
 index=which(is.na(dataset$RM))
 clean_data_mean$RM[index]=mean(clean_data_mean$RM,na.rm = TRUE)
-clean_data_mean$RM[index]
+```
 
-#Using mice library
-library(mice)
+As expected we replace all the missing value as the mean value of the column. However, as we mentioned before, using this method is very dangerous. Therefore, we are going to use some functions provided by the library "mice" that predicts the missing values based on the rest of the information contained in the dataset. 
+
+```{r, warning=FALSE,results=FALSE}
 set.seed(1234)
-methods(mice)
+#methods(mice)
 imputation=mice(dataset,m=5,method="pmm",maxit = 20)
+```
 
-#Check each prediction
+As we specified that we wanted 5 predictions, the mice function will gives us 5 different predictions.
+
+```{r, warning=FALSE}
 imputation$imp$RM
+```
 
-#We want to check something close to the mean value 6.288 so we are going to take the first prediction, because it has an error lower than 0.5 on each boundary
-summary(dataset$RM)
+Once we have the predictions we need a method to select which one is the better. It won't be a problem to use any of the ones obtained, however there are some useful tips that could help to choose the best one. As the mean value in our dataset is not very far away from the majority of the observations we really don't want any prediction to be very far away from the mean value. Therefore we are going to compute the errors between each prediction and the mean in order to see which one has less error.
 
+```{r, warning=FALSE}
 for(i in 1:5){
     print(imputation$imp$RM[i]-clean_data_mean$RM[index])
 }
+```
 
+Looks like in this case, the second prediction is the best one, as the higher value for the error is 0.25. Therefore, we choose this prediction to compute our missing values.
+
+```{r, warning=FALSE}
 clean_data=complete(imputation,1)
 ```
 
