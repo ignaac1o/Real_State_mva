@@ -12,22 +12,25 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-First of all, we are going to read the Boston house prices dataset file and show the summary and the structure:
+First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
-```{r}
+```{r,warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(MASS)
+library(RColorBrewer)
+library(GGally)
+library(andrews)
+library(corrplot)
+library(rrcov)
+library(mice)
+
 dataset <- read.csv("Dataset.csv")
-
-summary(dataset)
-str(dataset)
-
 ```
 
 ## Variables explanation
 
-Attribute Information:
+This dataset has been taken from [Kaggle](https://www.kaggle.com/c/boston-housing) and it contains information about housing market suburbs in Boston. It contains 511 observations which represent different suburbs in Boston area. It is formed by 14 variables, which are:
 
 - CRIM: This is a continuous variable that measures the crime per capital rate by town.
 - ZN: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
@@ -44,8 +47,8 @@ Attribute Information:
 - LSTAT: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
 - MEDV: Continuous variable with the median value price of owner-occupied homes in $1000's
 
+Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
 
-Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
 
 - _RAD.CAT_: low, medium and high
 - _RM.CAT_: low, medium and high
@@ -54,10 +57,10 @@ Next step is to convert the type of the categorical variable _CHAS_ into factor 
 - _ZN.CAT_: very low, low, high and very high
 
 ```{r}
-
 dataset.with.categories <- dataset
 
-dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS, labels=c("no bounds", "bounds"))
+#Convert to factor
+dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS)
 
 factor_rad_values <- sort(unique(dataset.with.categories$RAD))
 delimiter_rad_index <- length(factor_rad_values)/3
@@ -86,8 +89,8 @@ dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS,
     right = FALSE)
 
 dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT, 
-    breaks = c(-Inf, 25, 50, 75, Inf), 
-    labels = c('very low', 'low', 'high', 'very high'),
+    breaks = c(-Inf, 25, Inf), 
+    labels = c('Medium-High-class','Low-class'),
     right = FALSE)
 
 dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN, 
@@ -99,15 +102,11 @@ str(dataset.with.categories)
 
 ```
 
-We are going to define a method to generate the kernel plots: withouth any categorical variable and groupped by one qualitative:
+In order to visualize all the data and the different relations that it has, we are going to define a method to generate the kernel plots for continuous variables for all the groups in each category.
 
 ```{r}
-
-if (!require(RColorBrewer)) install.packages("RColorBrewer")
-library(RColorBrewer)
-
 kernel_by_factors <- function(x, x_name, type_color) {
-  factors <- Filter(is.factor, dataset)
+  factors <- Filter(is.factor, dataset.with.categories)
   num_vars <- ncol(factors)
   mod <- num_vars %% 2 
   
@@ -175,75 +174,53 @@ generate_kernel_by_cat_value <- function(x, cat, cat_value){
 
 ```
 
-Calling the method above with the parameters of interest: _TAX_, _MEDV_, _CRIM_ and _NOX_
+Now we are going to use these functions to plot different continuous variables in order to get knowladge about the different groups.
 
 ```{r fig.height=14}
 kernel_by_factors(dataset.with.categories$TAX, "TAX", "Set1")
 ```
 
+Within the first plot we can see how the variable TAX is distributed. It follows a bi-modal distribution, which means that there are two trends for the taxes paid. Notice that for high values on taxes, there is only one group that provides the weight for this second trend.  In particular, it happens with the plots associated to "RAD.CAT","INDUS.CAT" and "ZN.CAT". 
+
+Now, let's analyze the median price of the houses.
+
 ```{r fig.height=14}
 kernel_by_factors(dataset.with.categories$MEDV, "MEDV", "Dark2")
 ```
 
-```{r fig.height=14}
-kernel_by_factors(dataset.with.categories$CRIM, "CRIM", "Paired")
-```
-
-```{r fig.height=14}
-kernel_by_factors(dataset.with.categories$NOX, "NOX", "Accent")
-```
-
-We are going to visualize the matrix correlation between each variable:
-
-```{r fig.width=14, fig.height=14}
-if (!require(ggplot2)) install.packages("ggplot2")
-if (!require(GGally)) install.packages("GGally")
-library(ggplot2)
-library(GGally)
-
-is.not.fact <- sapply(dataset.with.categories, Negate(is.factor))
-dataset.no.factors <- dataset.with.categories[,is.not.fact]
-ggpairs(dataset.no.factors, title="Pairwise variable correlation")
-
-```
-
+We can see that for the median value of houses from different suburbs, it is difficult to distinguish distributions for different groups. However, we can see a difference in the variable LSTAT.CAT, as the density curves are significantly different for both classes in terms of skewness.
 
 ```{r}
-pairs(data=dataset.with.categories,~CRIM+ZN+INDUS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO+B+LSTAT+MEDV,pch=19,col=dataset$CHAS)
-```
-
-Within this plot we can see that there is a linear relationship between (NOX,DIS) and (LSTAT,MEDV)
-
-Now, lets try to find groups through scatter plots.
-```{r}
-ggplot(data=dataset.with.categories,aes(x=NOX,y=DIS))+geom_point(aes(colour=ZN.CAT))
-
 ggplot(data=dataset.with.categories,aes(y=MEDV,x=LSTAT))+geom_point(aes(colour=LSTAT.CAT))
 ```
 
-Density curves
+Within the scatter plot we can easily visualize the difference of populations. The lower percentage of people considered low-class the higher the price of houses.
 
-```{r}
-#Given river
-dataset.with.categories %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=CHAS))
+For the CRIM variable we are going to apply logarithm in order to obtain a better visualization of the plot, due to the strong skewness.
 
-#Given rooms
-dataset.with.categories %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=RM.CAT,fill=RM.CAT))
-
-dataset.with.categories %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=LSTAT.CAT))
-
-dataset.with.categories %>% ggplot(aes(x=(NOX))) + geom_density(aes(color=ZN.CAT))
+```{r fig.height=14}
+kernel_by_factors(log(dataset.with.categories$CRIM+1), "CRIM", "Paired")
 ```
 
-### PCP plot
+Again, the density curves for the CRIME variable do classify different populations easily. We can see for example that there is a big difference in the kurtosis for each group in LSTAT. We can see that for high-classes, the index of criminality is centered close to 0, whereas for low classes, it takes higher indexes.
+
+We can easily check this big difference in the median values using boxplots.
+
+```{r}
+ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=2) + ylim(c(0,50))
+```
+
+We are going to visualize the PCP plot grouping the values by the categorical variable: _RAD.CAT_ (the visualization is in blue for low, green for medium and orange for high): 
 
 ```{r}
 color_rad_cat=c("blue","green","orange2")[dataset.with.categories$RAD.CAT]
 parcoord(dataset.with.categories[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
 ```
-We can see that for high RAD.CAT the variables more affected are CRIM, AGE and DIS
+We can see that for high _RAD.CAT_ the variables more affected are CRIM, AGE and DIS. Nevertheless, we will analyze this plot deeper in the outlier section.
 
-ANDREWS curve
+Let's plot the andrews curve:
 
 ```{r}
 library(andrews)
@@ -251,6 +228,7 @@ par(mfrow=c(1,1))
 andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
 ```
 
+We have realized that there are a few outliers in the dataset, this is represented as an isolated line.
 
 ## Second step
 
