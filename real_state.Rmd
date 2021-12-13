@@ -1,3 +1,4 @@
+---
 title: "Assignment - Midterm - Boston Housing"
 subtitle: "Multivariate Analysis"
 author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
@@ -32,20 +33,20 @@ dataset <- read.csv("Dataset.csv")
 
 This dataset has been taken from [Kaggle](https://www.kaggle.com/c/boston-housing) and it contains information about housing market suburbs in Boston. It contains 511 observations which represent different suburbs in Boston area. It is formed by 14 variables, which are:
 
-- CRIM: This is a continuous variable that measures the crime per capital rate by town.
-- ZN: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
-- INDUS: Proportion of non-retail business acres per town. Continuous variable.
-- CHAS: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
-- NOX: Continuous variable that measures nitric oxides concentration (parts per 10 million).
-- RM: Measures the average number of rooms per dwelling. Continuous variable.
-- AGE: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
-- DIS: Continuous variable that indicates the weighted distances to five Boston employment centers.
-- RAD: Index of accessibility to radial highways. Larger index denotes better accessibility.
-- TAX: Continuous variable full-value property-tax rate per $10,000.
-- PTRATIO: Continuous variable that measures the proportion of pupil-teacher by town.
-- B: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
-- LSTAT: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
-- MEDV: Continuous variable with the median value price of owner-occupied homes in $1000's
+- _CRIM_: This is a continuous variable that measures the crime per capital rate by town.
+- _ZN_: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
+- _INDUS_: Proportion of non-retail business acres per town. Continuous variable.
+- _CHAS_: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
+- _NOX_: Continuous variable that measures nitric oxides concentration (parts per 10 million).
+- _RM_: Measures the average number of rooms per dwelling. Continuous variable.
+- _AGE_: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
+- _DIS_: Continuous variable that indicates the weighted distances to five Boston employment centers.
+- _RAD_: Index of accessibility to radial highways. Larger index denotes better accessibility.
+- _TAX_: Continuous variable full-value property-tax rate per $10,000.
+- _PTRATIO_: Continuous variable that measures the proportion of pupil-teacher by town.
+- _B_: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
+- _LSTAT_: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
+- _MEDV_: Continuous variable with the median value price of owner-occupied homes in $1000's
 
 Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
 
@@ -53,7 +54,7 @@ Analyzing the different values taken by the variables we noticed that some of th
 - _RAD.CAT_: low, medium and high
 - _RM.CAT_: low, medium and high
 - _INDUS.CAT_: very low, low, high and very high
-- _LSTAT.CAT_: very low, low, high and very high
+- _LSTAT.CAT_: Low-class, Medium-High-class
 - _ZN.CAT_: very low, low, high and very high
 
 ```{r}
@@ -90,7 +91,7 @@ dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS,
 
 dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT, 
     breaks = c(-Inf, 25, Inf), 
-    labels = c('Medium-High-class','Low-class'),
+    labels = c('Medium-High-class', 'Low-class'),
     right = FALSE)
 
 dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN, 
@@ -300,21 +301,36 @@ S_LSTAT_mhc <- cov(X_LSTAT_mhc)
 R_LSTAT_mhc <- cor(X_LSTAT_mhc)
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= LOW
-m_LSTAT_low <- colMeans(X_LSTAT_low)
-S_LSTAT_low <- cov(X_LSTAT_low)
-R_LSTAT_low <- cor(X_LSTAT_low)
+m_LSTAT_lc <- colMeans(X_LSTAT_lc)
+S_LSTAT_lc <- cov(X_LSTAT_lc)
+R_LSTAT_lc <- cor(X_LSTAT_lc)
 ```
 
 ### Interpretation of mean vector
 
 ```{r}
-m_quan
-m_LSTAT_low
-m_LSTAT_verylow
+mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
+rownames(mean_vector_comp) <- c("Total", "Lower Clas", "Medium-High Class")
+knitr::kable(mean_vector_comp)
 ```
 
 According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of 
 
+### Interpretation of covariance matrix
+
+```{r}
+S_quan
+S_LSTAT_mhc
+S_LSTAT_lc
+```
+
+### Interpretation of correlation matrix
+
+```{r}
+R_quan
+R_LSTAT_mhc
+R_LSTAT_lc
+```
 
 ## Outliers
 
