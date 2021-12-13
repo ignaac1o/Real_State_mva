@@ -2,7 +2,7 @@
 title: "Real_state"
 author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
 date: "12/4/2021"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,6 +21,31 @@ summary(dataset)
 str(dataset)
 
 ```
+
+Variables explanation
+
+Attribute Information:
+
+- CRIM: This is a continuous variable that measures the crime per capital rate by town.
+- ZN: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
+- INDUS: Proportion of non-retail business acres per town. Continuous variable.
+- CHAS: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
+- NOX: Continuous variable that measures nitric oxides concentration (parts per 10 million).
+- RM: Measures the average number of rooms per dwelling. Continuous variable.
+- AGE: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
+- DIS: Continuous variable that indicates the weighted distances to five Boston employment centers.
+- RAD: Index of accessibility to radial highways. Larger index denotes better accessibility.
+- TAX: Continuous variable full-value property-tax rate per $10,000.
+- PTRATIO: Continuous variable that measures the proportion of pupil-teacher by town.
+- B: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
+- 
+
+
+13- LSTAT % lower status of the population
+13- LSTAT % lower status of the population (proportion of adults without, some high school education and proportion of male workers classified as laborers)
+
+14- MEDV Median value of owner-occupied homes in $1000's
+
 
 Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
 
@@ -104,7 +129,7 @@ dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=RM.CAT,fill=RM.CAT))
 
 dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=LSTAT.CAT))
 
-dataset %>% ggplot(aes(x=NOX)) + geom_density(aes(color=ZN.CAT))
+dataset %>% ggplot(aes(x=(NOX))) + geom_density(aes(color=ZN.CAT))
 ```
 
 PCP plot
@@ -156,6 +181,7 @@ clean_data_mean$RM[index]
 
 #Using mice library
 library(mice)
+set.seed(1234)
 methods(mice)
 imputation=mice(dataset,m=5,method="pmm",maxit = 20)
 
