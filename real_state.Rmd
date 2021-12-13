@@ -16,10 +16,6 @@ library(ggplot2)
 library(dplyr)
 library(MASS)
 dataset <- read.csv("Dataset.csv")
-
-summary(dataset)
-str(dataset)
-
 ```
 
 Variables explanation
@@ -38,13 +34,8 @@ Attribute Information:
 - TAX: Continuous variable full-value property-tax rate per $10,000.
 - PTRATIO: Continuous variable that measures the proportion of pupil-teacher by town.
 - B: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
-- 
-
-
-13- LSTAT % lower status of the population
-13- LSTAT % lower status of the population (proportion of adults without, some high school education and proportion of male workers classified as laborers)
-
-14- MEDV Median value of owner-occupied homes in $1000's
+- LSTAT: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
+- MEDV: Continuous variable with the median value price of owner-occupied homes in $1000's
 
 
 Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
