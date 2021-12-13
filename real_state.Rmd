@@ -9,13 +9,13 @@ header-includes:
 output: pdf_document
 ---
 
-```{r setup, include=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
-```{r}
+```{r, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(MASS)
@@ -207,7 +207,7 @@ Again, the density curves for the CRIME variable do classify different populatio
 
 We can easily check this big difference in the median values using boxplots.
 
-```{r}
+```{r, warning=FALSE}
 ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) + 
   geom_boxplot(outlier.colour="red", outlier.shape=8,
                 outlier.size=2) + ylim(c(0,50))
@@ -310,7 +310,7 @@ R_LSTAT_lc <- cor(X_LSTAT_lc)
 
 ```{r}
 mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
-rownames(mean_vector_comp) <- c("Total", "Lower Clas", "Medium-High Class")
+rownames(mean_vector_comp) <- c("Total Classes", "Lower Class", "Medium-High Class")
 knitr::kable(mean_vector_comp)
 ```
 
@@ -367,7 +367,7 @@ var.outliers.mah.mcd[outliers.mah.mcd] <- colors[2]
 
 Checking for NA
 
-```{r}
+```{r, warning=FALSE}
 missingValues=function(data){
   count=0
   a=cbind(lapply(lapply(data, is.na), sum))
@@ -387,7 +387,7 @@ missingValues(dataset)
 
 Impute NA
 
-```{r}
+```{r, warning=FALSE}
 #With the mean
 clean_data_mean=dataset
 index=which(is.na(dataset$RM))
