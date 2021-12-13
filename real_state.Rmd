@@ -411,8 +411,8 @@ The _Mahalanobis_ distance calculated using the MCD procedure is:
 
 ```{r}
 colors = brewer.pal(n=3, name="Dark2")
-n <- nrow(dataset)
-p <- ncol(dataset)
+n <- nrow(clean_data)
+p <- ncol(clean_data)
 x.sq.mah.mcd <- mcd.estimators$mah
 var.outliers.mah.mcd <- rep(colors[1], n)
 outliers.mah.mcd <- which(x.sq.mah.mcd > qchisq(.99, p))
@@ -435,17 +435,16 @@ We can see the outliers in the dataset using two graph we have already used prev
 - PCP
 
 ```{r}
-pairs(X,pch=19,col=var.outliers.mah.mcd)
-
-parcoord(X,col=var.outliers.mah.mcd,var.label=TRUE,main="PCP for milk contents")
+parcoord(clean_data, col=var.outliers.mah.mcd, var.label=TRUE, main="PCP for Boston Housing")
 ```
 
 
-- Andrews Curve
+- Andrews' Curve
 
 ```{r}
-out_X <- rep(1,n)
-out_X[outliers.mah.mcd] <- 2
-andrews(as.data.frame(cbind(clean_data,as.factor(out_X))),clr=9,ymax=4,main="Andrews' Plot for milk contents")
+var.outliers.colors <- rep(colors[1],n)
+var.outliers.colors[outliers.mah.mcd] <- colors[2]
+andrews.matrix <- as.data.frame(cbind(clean_data, as.factor(var.outliers.colors)))
+andrews(andrews.matrix, clr=15, ymax=6, main="Andrews' Plot for Boston Housing")
 ```
 
