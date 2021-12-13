@@ -1,147 +1,337 @@
 ---
-title: "Real_state"
+title: "Assignment - Midterm - Boston Housing"
+subtitle: "Multivariate Analysis"
 author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
-date: "12/4/2021"
-output: html_document
+date: "12/12/2021"
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{mathtools}
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-First of all, we are going to read the Boston house prices dataset file and show the summary and the structure:
+First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
-```{r}
+```{r, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(MASS)
+library(RColorBrewer)
+library(GGally)
+library(andrews)
+library(corrplot)
+library(rrcov)
+library(mice)
+
+
 dataset <- read.csv("Dataset.csv")
 ```
 
-Variables explanation
+## Variables explanation
 
-Attribute Information:
+This dataset has been taken from [Kaggle](https://www.kaggle.com/c/boston-housing) and it contains information about housing market suburbs in Boston. It contains 511 observations which represent different suburbs in Boston area. It is formed by 14 variables, which are:
 
-- CRIM: This is a continuous variable that measures the crime per capital rate by town.
-- ZN: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
-- INDUS: Proportion of non-retail business acres per town. Continuous variable.
-- CHAS: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
-- NOX: Continuous variable that measures nitric oxides concentration (parts per 10 million).
-- RM: Measures the average number of rooms per dwelling. Continuous variable.
-- AGE: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
-- DIS: Continuous variable that indicates the weighted distances to five Boston employment centers.
-- RAD: Index of accessibility to radial highways. Larger index denotes better accessibility.
-- TAX: Continuous variable full-value property-tax rate per $10,000.
-- PTRATIO: Continuous variable that measures the proportion of pupil-teacher by town.
-- B: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
-- LSTAT: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
-- MEDV: Continuous variable with the median value price of owner-occupied homes in $1000's
+- _CRIM_: This is a continuous variable that measures the crime per capital rate by town.
+- _ZN_: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
+- _INDUS_: Proportion of non-retail business acres per town. Continuous variable.
+- _CHAS_: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
+- _NOX_: Continuous variable that measures nitric oxides concentration (parts per 10 million).
+- _RM_: Measures the average number of rooms per dwelling. Continuous variable.
+- _AGE_: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
+- _DIS_: Continuous variable that indicates the weighted distances to five Boston employment centers.
+- _RAD_: Index of accessibility to radial highways. Larger index denotes better accessibility.
+- _TAX_: Continuous variable full-value property-tax rate per $10,000.
+- _PTRATIO_: Continuous variable that measures the proportion of pupil-teacher by town.
+- _B_: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
+- _LSTAT_: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
+- _MEDV_: Continuous variable with the median value price of owner-occupied homes in $1000's
 
-
-Next step is to convert the type of the categorical variable _CHAS_ into factor and create a few categorical variables from suitable quantitative ones:
+Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
 
 - _RAD.CAT_: low, medium and high
 - _RM.CAT_: low, medium and high
 - _INDUS.CAT_: very low, low, high and very high
-- _LSTAT.CAT_: very low, low, high and very high
+- _LSTAT.CAT_: Low-class, Medium-High-class
 - _ZN.CAT_: very low, low, high and very high
 
 ```{r}
+dataset.with.categories <- dataset
 
-dataset$CHAS <- as.factor(dataset$CHAS)
+#Convert to factor
+dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS)
 
-factor_rad_values <- sort(unique(dataset$RAD))
+factor_rad_values <- sort(unique(dataset.with.categories$RAD))
 delimiter_rad_index <- length(factor_rad_values)/3
 lower_delimiter_rad_value <- factor_rad_values[round(delimiter_rad_index)]
 upper_delimiter_rad_value <- factor_rad_values[round(2*delimiter_rad_index)]
 
-dataset$RAD.CAT <- cut(dataset$RAD, 
+dataset.with.categories$RAD.CAT <- cut(dataset.with.categories$RAD, 
     breaks = c(-Inf, lower_delimiter_rad_value, upper_delimiter_rad_value, Inf), 
     labels = c('low', 'medium', 'high'),
     right = FALSE)
 
-dataset$RM.CAT <- cut(dataset$RM, 
+dataset.with.categories$RM.CAT <- cut(dataset.with.categories$RM, 
     breaks = c(-Inf, 4, 6, Inf), 
     labels = c('low', 'medium', 'high'),
     right = FALSE)
 
-factor_indus_values <- sort(unique(dataset$INDUS))
+factor_indus_values <- sort(unique(dataset.with.categories$INDUS))
 delimiter_indus_index <- length(factor_indus_values)/4
 lower_delimiter_indus_value <- factor_indus_values[round(delimiter_indus_index)]
 mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
 upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
 
-dataset$INDUS.CAT <- cut(dataset$INDUS, 
+dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS, 
     breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value, upper_delimiter_indus_value, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
-dataset$LSTAT.CAT <- cut(dataset$LSTAT, 
+dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT, 
+    breaks = c(-Inf, 25, Inf), 
+    labels = c('Medium-High-class', 'Low-class'),
+    right = FALSE)
+
+dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN, 
     breaks = c(-Inf, 25, 50, 75, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
-dataset$ZN.CAT <- cut(dataset$ZN, 
-    breaks = c(-Inf, 25, 50, 75, Inf), 
-    labels = c('very low', 'low', 'high', 'very high'),
-    right = FALSE)
-
-str(dataset)
+str(dataset.with.categories)
 
 ```
 
-
-
-I'm going to try to find differences in shapes between the different levels of a predictor and the variable that we want to predict, the average price.
-
-
+In order to visualize all the data and the different relations that it has, we are going to define a method to generate the kernel plots for continuous variables for all the groups in each category.
 
 ```{r}
-pairs(data=dataset,~CRIM+ZN+INDUS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO+B+LSTAT+MEDV,pch=19,col=dataset$CHAS)
+kernel_by_factors <- function(x, x_name, type_color) {
+  factors <- Filter(is.factor, dataset.with.categories)
+  num_vars <- ncol(factors)
+  mod <- num_vars %% 2 
+  
+  colors = brewer.pal(n = num_vars + 1, name=type_color)
+
+  par(mfrow=c(num_vars+mod+1,2), mar=c(2,2,2,2))
+  plot(density(x,kernel="gaussian"),
+   ylab="Density",
+   main=paste0("Kernel density of ", x_name),
+   xlab=x_name,
+   col=colors[1],
+   lwd=5)
+  
+  index_factor <- 1
+  for(factor in factors) {
+    plot_kernel_charts(x, factor[!is.na(factor)], x_name, names(factors[index_factor]), colors)
+    index_factor = index_factor + 1
+  }
+}
+
+plot_kernel_charts <- function(x, cat, x_name, cat_name, colors) {
+  cat_values <- levels(cat)
+  num_colors <- length(cat_values)
+  
+  min_x <<- c()
+  max_x <<- c()
+  min_y <<- c()
+  max_y <<- c()
+  
+  densities <<- list()
+  
+  for(cat_value in cat_values)
+    generate_kernel_by_cat_value(x, cat, cat_value)
+  
+  min_x <- min(min_x)
+  max_x <- max(max_x)
+  min_y <- min(min_y)
+  max_y <- max(max_y)
+  
+  plot(c(min_x,max_x),c(min_y,max_y),
+       xlab=x_name,
+       ylab="Density",
+       main=paste0("Kernel: ", x_name, " in terms of ", cat_name),
+       type="n")
+  legend(x="topright", legend=c(cat_values),col=colors[-1], lty=1, cex=0.8,
+     box.lty=0)
+  i <- 2
+  for(densitiy_by_cat in densities) {
+    lines(densitiy_by_cat$x, densitiy_by_cat$y, col=colors[i], lwd=1)
+    i = i + 1
+  }
+}
+
+generate_kernel_by_cat_value <- function(x, cat, cat_value){
+  if(length(cat[cat==cat_value]) > 2){
+    d_cat_value <- density(x[cat==cat_value], kernel="gaussian")
+    min_x <<- c(min_x, min(d_cat_value$x))
+    max_x <<- c(max_x, max(d_cat_value$x))
+    min_y <<- c(min_y, min(d_cat_value$y))
+    max_y <<- c(max_y, max(d_cat_value$y))
+    
+    densities <<- append(densities, list(d_cat_value))
+  }
+}
+
 ```
 
-Within this plot we can see that there is a linear relationship between (NOX,DIS) and (LSTAT,MEDV)
+Now we are going to use these functions to plot different continuous variables in order to get knowladge about the different groups.
 
-Now, lets try to find groups through scatter plots.
+```{r fig.height=14}
+kernel_by_factors(dataset.with.categories$TAX, "TAX", "Set1")
+```
+
+Within the first plot we can see how the variable TAX is distributed. It follows a bi-modal distribution, which means that there are two trends for the taxes paid. Notice that for high values on taxes, there is only one group that provides the weight for this second trend.  In particular, it happens with the plots associated to "RAD.CAT","INDUS.CAT" and "ZN.CAT". 
+
+Now, let's analyze the median price of the houses.
+
+```{r fig.height=14}
+kernel_by_factors(dataset.with.categories$MEDV, "MEDV", "Dark2")
+```
+
+We can see that for the median value of houses from different suburbs, it is difficult to distinguish distributions for different groups. However, we can see a difference in the variable LSTAT.CAT, as the density curves are significantly different for both classes in terms of skewness.
+
 ```{r}
-ggplot(data=dataset,aes(x=NOX,y=DIS))+geom_point(aes(colour=ZN.CAT))
-
-ggplot(data=dataset,aes(y=MEDV,x=LSTAT))+geom_point(aes(colour=LSTAT.CAT))
+ggplot(data=dataset.with.categories,aes(y=MEDV,x=LSTAT))+geom_point(aes(colour=LSTAT.CAT))
 ```
 
-Density curves
+Within the scatter plot we can easily visualize the difference of populations. The lower percentage of people considered low-class the higher the price of houses.
+
+For the CRIM variable we are going to apply logarithm in order to obtain a better visualization of the plot, due to the strong skewness.
+
+```{r fig.height=14}
+kernel_by_factors(log(dataset.with.categories$CRIM+1), "CRIM", "Paired")
+```
+
+Again, the density curves for the CRIME variable do classify different populations easily. We can see for example that there is a big difference in the kurtosis for each group in LSTAT. We can see that for high-classes, the index of criminality is centered close to 0, whereas for low classes, it takes higher indexes.
+
+We can easily check this big difference in the median values using boxplots.
+
+```{r, warning=FALSE}
+ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=2) + ylim(c(0,50))
+```
+
+We are going to visualize the PCP plot grouping the values by the categorical variable: _RAD.CAT_ (the visualization is in blue for low, green for medium and orange for high): 
 
 ```{r}
-#Given river
-dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=CHAS))
-
-#Given rooms
-dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=RM.CAT,fill=RM.CAT))
-
-dataset %>% ggplot(aes(x=MEDV)) + geom_density(aes(color=LSTAT.CAT))
-
-dataset %>% ggplot(aes(x=(NOX))) + geom_density(aes(color=ZN.CAT))
+color_rad_cat=c("blue","green","orange2")[dataset.with.categories$RAD.CAT]
+parcoord(dataset.with.categories[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
 ```
+We can see that for high _RAD.CAT_ the variables more affected are CRIM, AGE and DIS. Nevertheless, we will analyze this plot deeper in the outlier section.
 
-PCP plot
-
-```{r}
-color_rad_cat=c("blue","green","orange2")[dataset$RAD.CAT]
-parcoord(dataset[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
-```
-We can see that for high RAD.CAT the variables more affected are CRIM, AGE and DIS
-
-ANDREWS curve
+Let's plot the andrews curve:
 
 ```{r}
 library(andrews)
 par(mfrow=c(1,1))
-andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset$CHAS)),clr=8,ymax=4)
+andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
 ```
 
-<<<<<<< Updated upstream
-###############################3
-=======
+### Interpretation of correlation matrix
+
+```{r}
+knitr::kable(R_quan, caption="Correlation Matrix: total classes")
+knitr::kable(R_LSTAT_lc, caption="Correlation Matrix: lower class")
+knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
+```
+
+We have realized that there are a few outliers in the dataset, this is represented as an isolated line.
+
+## Characteristics of the quantitative variables
+
+The goal of this step is the estimation of the main characteristics of the quantitative variables. After the aggregation of some continuous variables, our dataset finally contains four continuous variables: *MEDV*, *TAX*, *NOX* and *CRIME*. 
+
+We have to consider that our data come from an homogeneous population. As we have seen in the previous step, exploratory analysis has suggested that we can split data in different groups. Hence, in order to check this assumption we will do inference over data estimating the mean vector, covariance matrix and correlation matrix. Therefore, we will be able to state each group formed belongs to a different population separately.
+
+The dataset is located in the scenario where there are more observations than variables (i.e. $n > p$, where $n$ is the number of observations which the dataset contains and $p$ the number of attributes). Thus, we will use the following expressions to compute the different estimations for a dataset with $n$ observations and $p$ variables:
+
+ - Estimation of $\mu$ as $E[\bar{x}]=\mu$, where $X = ({x}_{1},..., {x}_{p})^{T}$ and $\bar{x}$ is calculated as:
+
+$$
+\bar{x} = \frac{1}{n}\sum_{i=1}^{n}x_{i.} =
+\begin{pmatrix}
+ \bar{x}_{1}\\
+ \bar{x}_{2} \\
+ \vdots\\
+ \bar{x}_{p}
+\end{pmatrix}
+$$
+
+ - Estimation of $\sum$ as $E[S] = \sum$, where $S$ is the covariance matrix of $x = ({x}_{1},..., {x}_{p})^{T}$ and it is obtained as following:
+
+$$
+ S = \frac{1}{n-1}\sum_{i=1}^{n}(x_{i.}-\bar{x})(x_{i.}-\bar{x}) =
+\begin{pmatrix}
+ {s}_{1}^{2}&{s}_{12}^{2}&...&{s}_{1p}^{2}\\
+ {s}_{21}^{2}&{s}_{2}^{2}&...&{s}_{2p}^{2}\\
+ \vdots & \ddots & \ddots & \vdots \\
+ {s}_{n1}^{2}&{s}_{n2}^{2}&...&{s}_{p}^{2}
+\end{pmatrix}
+$$
+
+where ${s}_{p}^{2}$ is the sample variance of $x_j$ and ${s}_{jk}^{2}$ is the sample covariance bewteen $x_j$ and $x_k$ with $j\neq	k$.
+
+ - Estimation of correlation matrix of $X = ({x}_{1},..., {x}_{p})^{T}$ through covariance matrix as following:
+ 
+$$
+ R = 
+\begin{pmatrix}
+ 1&{r}_{12}&...&{r}_{1p}\\
+ {r}_{21}&1&...&{r}_{2p}\\
+ \vdots & \ddots & \ddots & \vdots \\
+ {r}_{n1}&{r}_{n2}&...&1
+\end{pmatrix}
+$$
+
+knowing that ${r}_{jk}$ with $j\neq	k$ is computed with expression ${r}_{jk} = \frac{{s}_{jk}}{{s}_{j}{s}_{k}}$ which is the sample correlation coefficient between $x_j$ and $x_k$.
+
+
+From the conclusions obtained  in the  analysis step, we will compute the previous expressions. We have identified a group formed by the qualitative variable *LSTAT.CAT* and the four quantitative attributes left, as we consider that any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
+
+```{r}
+X_quan = dataset.with.categories %>% dplyr::select(TAX, MEDV, CRIM, NOX)
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION FOR QUANTITATIVE VARIABLES
+m_quan <- colMeans(X_quan)
+S_quan <- cov(X_quan)
+R_quan <- cor(X_quan)
+
+# LSTAT - QUATITATIVE VARIABLES
+# LSTAT: Two possibles categories 
+X_LSTAT_mhc <- X_quan[dataset.with.categories$LSTAT.CAT =="Medium-High-class",]
+X_LSTAT_lc <- X_quan[dataset.with.categories$LSTAT.CAT =="Low-class",]
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= VERY LOW
+m_LSTAT_mhc <- colMeans(X_LSTAT_mhc)
+S_LSTAT_mhc <- cov(X_LSTAT_mhc)
+R_LSTAT_mhc <- cor(X_LSTAT_mhc)
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= LOW
+m_LSTAT_lc <- colMeans(X_LSTAT_lc)
+S_LSTAT_lc <- cov(X_LSTAT_lc)
+R_LSTAT_lc <- cor(X_LSTAT_lc)
+```
+
+### Interpretation of mean vector
+
+```{r}
+mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
+rownames(mean_vector_comp) <- c("Total Classes", "Lower Class", "Medium-High Class")
+knitr::kable(mean_vector_comp, caption="Mean vector")
+```
+
+According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of 
+
+### Interpretation of covariance matrix
+
+```{r}
+knitr::kable(S_quan, caption="Covariance Matrix: total classes")
+knitr::kable(S_LSTAT_lc, caption="Covariance Matrix: lower class")
+knitr::kable(S_LSTAT_mhc, caption="Covariance Matrix: medium high classes")
+```
+
 ### Interpretation of correlation matrix
 
 ```{r}
@@ -152,7 +342,6 @@ knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes")
 
 
 ## Imputation of missing values
->>>>>>> Stashed changes
 
 Missing values are a very frequent problem that appears in almost every dataset. Therefore, it is important to know how to deal with them.
 
@@ -164,7 +353,7 @@ There are other methods to impute missing values that are based on predictions, 
 
 First of all, we are going to build a function that summarizes if there are any NA in our dataset. 
 
-```{r}
+```{r, warning=FALSE}
 missingValues=function(data){
   count=0
   a=cbind(lapply(lapply(data, is.na), sum))
@@ -186,12 +375,7 @@ We found that there are 5 missing values in the variable RM. In order to impute 
 
 First of all we are going to see how would it look to replace our missing values with the mean value of the variable.
 
-<<<<<<< Updated upstream
-```{r}
-#With the mean
-=======
 ```{r, warning=FALSE}
->>>>>>> Stashed changes
 clean_data_mean=dataset
 index=which(is.na(dataset$RM))
 clean_data_mean$RM[index]=mean(clean_data_mean$RM,na.rm = TRUE)
@@ -225,4 +409,68 @@ Looks like in this case, the second prediction is the best one, as the higher va
 clean_data=complete(imputation,1)
 ```
 
+## Outliers
+
+The next step is about analyzing the outliers present in the dataset. Then, we are going to use the _Mahalanobis_ distance which plays an important role in outlier detection using the _Minimum Covariance Determinant_ (MCD) which is based on this. 
+
+This functionality is provided by the function _CovMcd_ inside the package _rrcov_. We have used it and executed with the dataset without imputing any missing value, nevertheless, as it is said in the [documentation](https://www.rdocumentation.org/packages/robustbase/versions/0.93-9/topics/covMcd) of the function, the input data must be a numeric matrix and must not have NA's. Hence, we are going to apply this method with the dataset which contains the missing values imputed.
+
+```{r}
+if (!require(RColorBrewer)) install.packages("RColorBrewer")
+library(rrcov)
+
+mcd.estimators <- CovMcd(clean_data, alpha=0.85, nsamp="deterministic")
+mean.mcd.estimators <- mcd.estimators$center
+covariance.mcd.estimators <- mcd.estimators$cov
+correlation.mcd.estimators <- cov2cor(covariance.mcd.estimators)
+```
+
+The main characteristics of the dataset without outliers, generated by the _MCD_ procedure, are:
+
+```{r}
+knitr::kable(rbind(mean.mcd.estimators), caption="Mean vector without outliers")
+knitr::kable(covariance.mcd.estimators, caption="Covariance matrix without outliers")
+knitr::kable(correlation.mcd.estimators, caption="Correlation matrix without outliers")
+```
+
+The _Mahalanobis_ distance calculated using the MCD procedure is:
+
+```{r}
+colors = brewer.pal(n=3, name="Dark2")
+n <- nrow(clean_data)
+p <- ncol(clean_data)
+x.sq.mah.mcd <- mcd.estimators$mah
+var.outliers.mah.mcd <- rep(colors[1], n)
+outliers.mah.mcd <- which(x.sq.mah.mcd > qchisq(.99, p))
+var.outliers.mah.mcd[outliers.mah.mcd] <- colors[2]
+```
+
+The next two plots identify the outliers of the dataset using the method commented above. Both charts represent the same data but in the chart on the right the data is transformed using logarithms in order to visualize it properly.
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(1:n,x.sq.mah.mcd,pch=19,col=var.outliers.mah.mcd,main="Squared Mahalanobis distances",xlab="Observation",ylab="Squared Mahalanobis distance")
+abline(h=qchisq(.99,p),lwd=3,col=colors[1])
+plot(1:n,log(x.sq.mah.mcd),pch=19,col=var.outliers.mah.mcd,main="Log of squared Mahalanobis distances",xlab="Observation",ylab="Log of squared Mahalanobis distance")
+abline(h=log(qchisq(.99,p)),lwd=3,col=colors[1])
+```
+
+We can see the outliers in the dataset using two graph we have already used previously:
+
+- PCP
+
+```{r}
+parcoord(clean_data, col=var.outliers.mah.mcd, var.label=TRUE, main="PCP for Boston Housing")
+```
+
+
+- Andrews' Curve
+
+```{r}
+var.outliers.colors <- rep(colors[1],n)
+var.outliers.colors[outliers.mah.mcd] <- colors[2]
+andrews.matrix <- as.data.frame(cbind(clean_data, as.factor(var.outliers.colors)))
+andrews(andrews.matrix, clr=15, ymax=6, main="Andrews' Plot for Boston Housing")
+```
 
