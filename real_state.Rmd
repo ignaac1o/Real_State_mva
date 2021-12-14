@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(dplyr)
 library(MASS)
@@ -85,7 +85,8 @@ mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
 upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
 
 dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS, 
-    breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value, upper_delimiter_indus_value, Inf), 
+    breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value, 
+               upper_delimiter_indus_value, Inf), 
     labels = c('very low', 'low', 'high', 'very high'),
     right = FALSE)
 
@@ -123,7 +124,10 @@ kernel_by_factors <- function(x, x_name, type_color) {
   
   index_factor <- 1
   for(factor in factors) {
-    plot_kernel_charts(x, factor[!is.na(factor)], x_name, names(factors[index_factor]), colors)
+    plot_kernel_charts(x, 
+                       factor[!is.na(factor)], 
+                       x_name, 
+                       names(factors[index_factor]), colors)
     index_factor = index_factor + 1
   }
 }
@@ -215,15 +219,16 @@ ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) +
 
 We are going to visualize the PCP plot grouping the values by the categorical variable: _RAD.CAT_ (the visualization is in blue for low, green for medium and orange for high): 
 
-```{r}
+```{r fig.width=14}
 color_rad_cat=c("blue","green","orange2")[dataset.with.categories$RAD.CAT]
 parcoord(dataset.with.categories[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
 ```
+
 We can see that for high _RAD.CAT_ the variables more affected are CRIM, AGE and DIS. Nevertheless, we will analyze this plot deeper in the outlier section.
 
 Let's plot the andrews curve:
 
-```{r}
+```{r fig.width=14}
 library(andrews)
 par(mfrow=c(1,1))
 andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
@@ -321,7 +326,7 @@ R_quan2 <- cor(X_quan2)
 
 ```{r}
 mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
-rownames(mean_vector_comp) <- c("Total Classes", "Lower Class", "Medium-High Class")
+rownames(mean_vector_comp) <- c("Total Class", "Lower Class", "Medium-High Class")
 knitr::kable(mean_vector_comp, caption="Mean vector")
 ```
 
