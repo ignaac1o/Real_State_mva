@@ -451,13 +451,13 @@ Comparing these values with those ones obtained above we can conclude that the o
 knitr::kable(covariance.mcd.est.quan, caption="Covariance matrix without outliers", digits = 4)
 ```
 
-We can assume correctly that for the variance the values would be decreased as well, due to the fact that the sample covariance is calculated using the sample mean. Taking a look to the table of the covariance matrix, we have noticed that the values are decreased. For example, for the variance of the variable _CRIM_, the value has decreased from 73.35 to 6.82, which is considerable signficant.
+We can assume correctly that for the variance the values would be decreased as well, due to the fact that the sample covariance is calculated using the sample mean. Taking a look to the table of the covariance matrix, we have noticed that the values are decreased. For example, the value of the $Cov(CRIM)$ has decreased from 73.35 to 6.82, which is a change considerably signficant.
 
 ```{r}
 knitr::kable(correlation.mcd.est.quan, caption="Correlation matrix without outliers", digits = 4)
 ```
 
-In the correlation matrix plotted above we can see those values without outliers. Comparing with the regular version of the correlation matrix, we have concluded that the correlation has changed significantlly in the case of the $Cov(TAX,CRIM)$ -from 0.85 to 0.58- and the $Cov(CRIM, NOX)$ from 0.68 to 0.42.
+In the correlation matrix plotted above we can see those values without outliers. Comparing with the regular version of the correlation matrix, we have concluded that the correlation has changed significantlly in the case of the $Cov(TAX,CRIM)$ -from 0.58 to 0.85- and the $Cov(CRIM, NOX)$ from 0.42 to 0.68. Hence, getting rid of the outliers produces the revelation of the significant relations between variable.
 
 After comparing these characteristics, we say that the outliers could misrepresent the data in a bad way.
 
