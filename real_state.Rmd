@@ -327,7 +327,7 @@ knitr::kable(mean_vector_comp, caption="Mean vector")
 
 According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of proportion of adults male laborers without some high school education implies a decrease in the median value of owner-occupied homes. 
 
-On the other hand, we can obtain conclusions from *CRIM* variable, since the mean for observations whose label is *low class* is quite lower than those whose label is *medium-high-class*. It means that in those suburbs in which working-clase is the predominant the crime rate is greater.
+On the other hand, we can obtain conclusions from *CRIM* variable, since the mean for observations whose label is *low class* is quite lower than those whose label is *medium-high-class*. It means that in those suburbs in which working-class is the predominant, the crime rate is greater.
 
 ### Covariance matrix
 
@@ -348,7 +348,7 @@ knitr::kable(R_quan2, caption="Correlation Matrix: qualitative and quantitative 
 
 The correlation matrix for label "low-class" suggest that in those observations exists a strong positive linear relationship between the variables *CRIM* and *TAX*. By contrast, in the correlation matrix for label "low-class" we find that the strongest relationship is in this case between *NOX* and *TAX*.
 
-However, the most interesting thing is the values of the correlation matrix composed by the five attributes (we have added up the qualitative variable). The last column of this matrix states the evidence we have mentioned previously. We can see that the correlation coefficient is negative for the pair *MEDV*-*LSTAT* as the mean of the median value of prices decrease when the percentage of *low-class* increase. for ther pair *CRIME*-*LSTAT* occurs the inverse, when *low-status* increases, values of variable *CRIME* increase as they have a positive linear relationship.
+However, the most interesting thing is the values of the correlation matrix composed by the five attributes (we have added up the qualitative variable). The last column of this matrix states the evidence we have mentioned previously. We can see that the correlation coefficient is negative for the pair *MEDV*-*LSTAT* as the mean of the median value of prices decreases when the percentage of *low-class* increases. For the pair *CRIME*-*LSTAT* occurs the inverse, when *low-status* increases, values of variable *CRIME* increase as they have a positive linear relationship.
 
 
 ## Imputation of missing values
