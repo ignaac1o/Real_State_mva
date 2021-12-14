@@ -428,7 +428,6 @@ This functionality is provided by the function _CovMcd_ inside the package _rrco
 ```{r}
 if (!require(RColorBrewer)) install.packages("RColorBrewer")
 library(rrcov)
-
 mcd.estimators <- CovMcd(clean_data, alpha=0.85, nsamp="deterministic")
 mean.mcd.estimators <- mcd.estimators$center
 covariance.mcd.estimators <- mcd.estimators$cov
@@ -443,11 +442,24 @@ covariance.mcd.est.quan <- covariance.mcd.estimators[
   c('TAX','MEDV','CRIM','NOX'),c('TAX','MEDV','CRIM','NOX')]
 correlation.mcd.est.quan <- correlation.mcd.estimators[
   c('TAX','MEDV','CRIM','NOX'),c('TAX','MEDV','CRIM','NOX')]
-
 knitr::kable(mean.mcd.est.quan, caption="Mean vector without outliers", digits = 4)
+```
+
+Comparing these values with those ones obtained above we can conclude that the outliers influence directly the mean. In this case, the mean values of _TAX_ and _CRIM_ decreases from 407.44 to 359.40 and 3.58 to 1.18, respectively. Therefore, this shows that the mean is not a robustic statistic.
+
+```{r}
 knitr::kable(covariance.mcd.est.quan, caption="Covariance matrix without outliers", digits = 4)
+```
+
+We can assume correctly that for the variance the values would be decreased as well, due to the fact that the sample covariance is calculated using the sample mean. Taking a look to the table of the covariance matrix, we have noticed that the values are decreased. For example, for the variance of the variable _CRIM_, the value has decreased from 73.35 to 6.82, which is considerable signficant.
+
+```{r}
 knitr::kable(correlation.mcd.est.quan, caption="Correlation matrix without outliers", digits = 4)
 ```
+
+In the correlation matrix plotted above we can see those values without outliers. Comparing with the regular version of the correlation matrix, we have concluded that the correlation has changed significantlly in the case of the $Cov(TAX,CRIM)$ -from 0.85 to 0.58- and the $Cov(CRIM, NOX)$ from 0.68 to 0.42.
+
+After comparing these characteristics, we say that the outliers could misrepresent the data in a bad way.
 
 The _Mahalanobis_ distance calculated using the MCD procedure is:
 
@@ -455,8 +467,12 @@ The _Mahalanobis_ distance calculated using the MCD procedure is:
 colors = brewer.pal(n=3, name="Dark2")
 n <- nrow(clean_data)
 p <- ncol(clean_data)
+
+# Mahalanobis distance for each point
 x.sq.mah.mcd <- mcd.estimators$mah
 var.outliers.mah.mcd <- rep(colors[1], n)
+
+# Indexes which contains an observation considered as outlier
 outliers.mah.mcd <- which(x.sq.mah.mcd > qchisq(.99, p))
 var.outliers.mah.mcd[outliers.mah.mcd] <- colors[2]
 ```
