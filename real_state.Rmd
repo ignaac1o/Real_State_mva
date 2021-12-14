@@ -307,11 +307,12 @@ R_LSTAT_lc <- cor(X_LSTAT_lc)
 
 #CORRELATION MATRIX FOR QUANTITATIVE VARIABLES AND LSTAT VARIABLE
 #Encoding LSTAT as a binary variable (0 = medium-high-class, 1 = low-class)
-dataset$LSTAT <- cut(dataset$LSTAT, 
+dataset.cut <- dataset
+dataset.cut$LSTAT <- cut(dataset.cut$LSTAT, 
                       breaks = c(-Inf, 25, Inf), 
                       labels = c(0, 1),
                       right = FALSE)
-dataset$LSTAT <- as.numeric(levels(dataset$LSTAT))[dataset$LSTAT]
+dataset.cut$LSTAT <- as.numeric(levels(dataset.cut$LSTAT))[dataset.cut$LSTAT]
 X_quan2 = dataset %>% dplyr::select(TAX, MEDV, CRIM, NOX, LSTAT)
 R_quan2 <- cor(X_quan2)
 ```
