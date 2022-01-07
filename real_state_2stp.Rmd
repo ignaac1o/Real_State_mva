@@ -578,5 +578,106 @@ pairs(X_pcs$x[,1:3],col=colors_X,pch=19,main="The first four PCs")
 ```
 The PCs show that the 3rd PC is the key to show the two groups
 
-## Partitional method
+## Partitional clustering methods
 
+The idea of partitional methods is to find the best of multiple partitions which provide us with the best of all the possible solutions. It can be achieved minimizing the $WSS_k$, i.e. the within-cluster sums of squares where $k$ is the number of clusters. The main method for achieve this is through K-means algorithm.  
+
+Before we apply K-means algorithm, we must choose the suitable number of clusters. For this purpose, we will use different methods. First, we select this value $k$ with $WSS_k$: 
+
+```{r}
+library("factoextra")
+fviz_nbclust(X,kmeans,method="wss",k.max=10)
+```
+```{r}
+fviz_nbclust(X,kmeans,method="silhouette",k.max=10)
+```
+
+```{r}
+library(cluster)
+library(factoextra)
+gap_stat <- clusGap(X,FUN=kmeans,K.max=10,B=100)
+fviz_gap_stat(gap_stat,linecolor="steelblue",maxSE=list(method="firstmax",SE.factor = 1))
+```
+```{r}
+kmeans_X <- kmeans(X,centers=3,iter.max=1000,nstart=100)
+kmeans_X$cluster
+```
+
+```{r}
+colors_kmeans_X <- c("green","blue","black")[kmeans_X$cluster]
+plot(X_pcs$x[,1:2],pch=19,col=colors_kmeans_X,main="First two PCs",xlab="First PC",ylab="Second PC")
+```
+```{r}
+sil_kmeans_X <- silhouette(kmeans_X$cluster,dist(X,"euclidean"))
+plot(sil_kmeans_X,col="green")
+```
+### PAM
+```{r}
+pam_X <- pam(X,k=3,metric="manhattan",stand=FALSE)
+```
+
+# Make a plot of the first two PCs with the solution
+
+```{r}
+colors_pam_X <- c("green","blue","black")[pam_X$cluster]
+plot(X_pcs$x[,1:2],pch=19,col=colors_pam_X,main="First two PCs",xlab="First PC",ylab="Second PC")
+```
+```{r}
+sil_pam_X <- silhouette(pam_X$cluster,dist(X,method="manhattan"))
+plot(sil_pam_X,col="blue")
+```
+
+### CLARA
+
+```{r}
+clara_X <- clara(X,k=3,metric="manhattan",stand=FALSE)
+```
+```{r}
+colors_clara_X <- c("green","blue","black")[clara_X$cluster]
+plot(X_pcs$x[,1:2],pch=19,col=colors_clara_X,main="First two PCs",xlab="First PC",ylab="Second PC")
+```
+
+```{r}
+sil_clara_X <- silhouette(clara_X$cluster,dist(X,method="manhattan"))
+plot(sil_clara_X,col=color_1)
+```
+
+```{r}
+colors_X <- c("black","blue")[1*(clean_data$CHAS==1)+1]
+par(mfrow=c(1,1))
+plot(X_pcs$x[,1:2],pch=19,col=colors_X)
+```
+
+### PAM with Grow distance
+
+```{r}
+X.qual <- clean_data
+X.qual$CHAS <- as.factor(X.qual$CHAS)
+```
+```{r}
+X_Gower <- daisy(X.qual,metric="gower")
+summary(X_Gower)
+```
+```{r}
+X_Gower_mat <- as.matrix(X_Gower)
+X[which(X_Gower_mat==min(X_Gower_mat[X_Gower_mat!=min(X_Gower_mat)]),arr.ind = TRUE)[1,],]
+```
+```{r}
+X[which(X_Gower_mat==max(X_Gower_mat[X_Gower_mat!=max(X_Gower_mat)]),arr.ind = TRUE)[1,],]
+```
+```{r}
+X_K <- matrix(NA,nrow=1,ncol=19)
+for (i in 1:19){
+  pam_X_Gower_mat <- pam(X_Gower_mat,k=i+1,diss=TRUE)
+  X_K[i] <- pam_X_Gower_mat$silinfo$avg.width
+}
+plot(2:20,X_K,pch=19,col="deepskyblue2",xlab="Number of clusters",ylab="Average silhouette")
+which.max(X_K)+1
+```
+```{r}
+pam_X_Gower_mat <- pam(X_Gower_mat,k=2,diss=TRUE)
+X.qual[pam_X_Gower_mat$medoids,]
+sil_pam_X_Gower_mat <- silhouette(pam_X_Gower_mat$cluster,X_Gower_mat)
+plot(sil_pam_X_Gower_mat,col="green")
+summary(sil_pam_X_Gower_mat)
+```
