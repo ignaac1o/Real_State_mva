@@ -578,4 +578,5 @@ pairs(X_pcs$x[,1:3],col=colors_X,pch=19,main="The first four PCs")
 ```
 The PCs show that the 3rd PC is the key to show the two groups
 
+## Partitional method
 
