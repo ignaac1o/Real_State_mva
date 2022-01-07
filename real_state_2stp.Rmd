@@ -125,6 +125,8 @@ dataset.with.categories <- clean_data
 #Convert to factor
 dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS)
 
+
+
 ```
 
 In order to visualize all the data and the different relations that it has, we are going to define a method to generate the kernel plots for continuous variables for all the groups in each category.
@@ -486,8 +488,15 @@ Qualitative Variables - Variables that are not measurement variables. Their valu
 Therefore we need to delete only CHAS, as the rest of our variables are proportions or averages.
 
 ```{r}
+clean_data$LSTAT.CAT <- cut(clean_data$LSTAT, 
+    breaks = c(-Inf, 25, Inf), 
+    labels = c('Medium-High-class', 'Low-class'),
+    right = FALSE)
+
 X=clean_data
 X$CHAS=NULL
+X$LSTAT=NULL
+X$LSTAT.CAT=NULL
 ```
 
 Now we take the dimension of our new matrix X
@@ -521,10 +530,10 @@ X_trans[,8] <- log(X[,8])
 colnames(X_trans)[8] <- "log_RAD"
 X_trans[,11] <- log(X[,11])
 colnames(X_trans)[11] <- "log_B"
+#X_trans[,12] <- log(X[,12])
+#colnames(X_trans)[12] <- "log_LSTAT"
 X_trans[,12] <- log(X[,12])
-colnames(X_trans)[12] <- "log_LSTAT"
-X_trans[,13] <- log(X[,13])
-colnames(X_trans)[13] <- "log_MEDV"
+colnames(X_trans)[12] <- "log_MEDV"
 
 par(mfrow=c(4,5))
 sapply(names(X_trans),function(cname){hist(X_trans[[cname]],main=cname,col="green")})
@@ -567,14 +576,14 @@ draw.circle(0,0,0.3,border="orange",lwd=3)
 Let's see how it differentiates the groups for river or not
 
 ```{r}
-colors_X <- c("black","blue")[1*(clean_data$CHAS==1)+1]
+colors_X <- c("black","blue")[1*(clean_data$LSTAT.CAT=="Medium-High-class")+1]
 par(mfrow=c(1,1))
 plot(X_pcs$x[,1:2],pch=19,col=colors_X)
 ```
 Now lets see how it differentiate in terms of pcas
 
 ```{r}
-pairs(X_pcs$x[,1:3],col=colors_X,pch=19,main="The first four PCs")
+pairs(X_pcs$x[,1:4],col=colors_X,pch=19,main="The first four PCs")
 ```
 The PCs show that the 3rd PC is the key to show the two groups
 
