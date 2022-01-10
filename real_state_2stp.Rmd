@@ -512,16 +512,15 @@ The graph we have plotted above provides an easy way to visualize the data in hi
 
 ## 2nd Step
 
-We need to remove both binary and qualitative variables.
+### PCA
 
-Quantitative Variables - Variables whose values result from counting or measuring something.
+In this step we are going to apply PCA over our dataset. PCA can only be used when the data matrix contains quantitative variables. Therefore, we need to remove both binary and qualitative variables from our Data Set. 
 
-Qualitative Variables - Variables that are not measurement variables. Their values do not result from measuring or counting.
+From the first step of the project we conclude that we were only going to consider as categorical the LSTAT feature. So, along with the variable CHAS which was a binary variable from the beginning, we are going to remove both of them to apply PCA.
 
-Therefore we need to delete only CHAS, as the rest of our variables are proportions or averages.
+Also, as we have observations with different measures, it will be useful for other applications to have our data scaled. 
 
 ```{r}
-#library(scales)
 clean_data$LSTAT= clean_data$LSTAT %>% factor(levels = c("Low-class","Medium-High-class")
                                               ,labels = c(1,0))
 
@@ -535,7 +534,7 @@ X=data_scale
 colMeans(X)
 ```
 
-Now we take the dimension of our new matrix X
+Once we have our data matrix ready, we check its dimensions.
 
 ```{r}
 n <- nrow(X)
@@ -544,14 +543,13 @@ p <- ncol(X)
 p
 ```
 
-And we plot all the variables
+In order to see how our variables are distributed, we are going to plot all the variables together.
 
 ```{r}
-par(mfrow=c(4,5))
-sapply(names(X),function(cname){hist(X[[cname]],main=cname,col="blue")})
-
+par(mfrow=c(3,4))
+sapply(names(X),function(cname){hist(X[[cname]],main=cname,col="lightblue")})
 ```
-We transform some variables and take logs
+As it can be seen, there are some of our variables that are very skewed, both positive and negative. Therefore, we are going to apply logarithm to them so we reduce the influence of extreme values or outliers.
 
 ```{r}
 X_trans <- X
@@ -559,45 +557,48 @@ X_trans[,1] <- log(X[,1]+10)
 colnames(X_trans)[1] <- "log_CRIM"
 X_trans[,2] <- log(X[,2]+10)
 colnames(X_trans)[2] <- "log_ZN"
-X_trans[,3] <- log(X[,3]+10)
-colnames(X_trans)[3] <- "log_INDUS"
 X_trans[,7] <- log(X[,7]+10)
 colnames(X_trans)[7] <- "log_DIS"
 X_trans[,8] <- log(X[,8]+10)
 colnames(X_trans)[8] <- "log_RAD"
 X_trans[,11] <- log(X[,11]+10)
 colnames(X_trans)[11] <- "log_B"
-X_trans[,12] <- log(X[,12]+10)
-colnames(X_trans)[12] <- "log_MEDV"
 
-par(mfrow=c(4,5))
-sapply(names(X_trans),function(cname){hist(X_trans[[cname]],main=cname,col="green")})
+par(mfrow=c(3,4))
+sapply(names(X_trans),function(cname){hist(X_trans[[cname]],main=cname,col="lightgreen")})
 ```
+Once we have our matrix ready we can apply PCA over it. The function used in R has an option that when TRUE, the data is automatically scaled. However, as we already scaled our data, we do not have to indicate it.
+
 ```{r}
 X_pcs <- prcomp(X_trans)
 dim(X_pcs$x)
-head(X_pcs$x)
 ```
+
+Now, our variable X_pcs is a matrix with principal component analysis applied.
 
 ```{r}
 library(factoextra)
-fviz_eig(X_pcs,ncp=17,addlabels=T,barfill="lightblue",barcolor="green")
+fviz_eig(X_pcs,ncp=17,addlabels=T,barfill="lightyellow",barcolor="orange")
 a=get_eigenvalue(X_pcs)
+a
 ```
 
-Using jut 6 PCA we can explain almost a 90% of the information in the dataset.
+Using this plot we can see which percentage of variance is explained by each principal component. In this case we can see that the first one already explains almost a 55% of the variance. However, this does not mean that each column is less useful than the other one. It could happen that even though one of the principal components explains less variance, it differentiates groups better.
 
+Analyzing the cumulative variance percent, we can see that using the first four principal components we can explain a 89% of the variance. Therefore, we are going to continue our analysis using this first four components.
 
 ```{r}
 dim(X_pcs$rotation)
-X_pcs$rotation[,1:5]
+X_pcs$rotation[,1:4]
 ```
 
+Now using the rotation attributes we can see how much each variable contribute to each principal component. This point is easier to do whith a plot:
+
 ```{r}
-plot(1:p,X_pcs$rotation[,1],pch=19,col="green",main="Weights for the first PC",
+plot(1:p,X_pcs$rotation[,1],pch=19,col="lightgreen",main="Weights for the first PC",
      xlab="Variables",ylab="Score")
 abline(h=0)
-text(1:p,X_pcs$rotation[,1],labels=colnames(X),pos=1,col="green",cex=0.75)
+text(1:p,X_pcs$rotation[,1],labels=colnames(X),pos=1,col="orange",cex=0.75)
 ```
 
 ```{r}
