@@ -375,14 +375,11 @@ R_LSTAT_lc <- cor(X_LSTAT_lc)
 
 #CORRELATION MATRIX FOR QUANTITATIVE VARIABLES AND LSTAT VARIABLE
 #Encoding LSTAT as a binary variable (0 = medium-high-class, 1 = low-class)
-# dataset.cut <- dataset
-# dataset.cut$LSTAT <- cut(dataset.cut$LSTAT, 
-#                       breaks = c(-Inf, 25, Inf), 
-#                       labels = c(0, 1),
-#                       right = FALSE)
+dataset.cut <- clean_data
+dataset.cut$LSTAT %>%  factor(levels = c("Low-class","Medium-High-class"),labels = c(1,0))
 # dataset.cut$LSTAT <- as.numeric(levels(dataset.cut$LSTAT))[dataset.cut$LSTAT]
-# X_quan2 = dataset %>% dplyr::select(TAX, MEDV, CRIM, NOX, LSTAT)
-# R_quan2 <- cor(X_quan2)
+X_quan2 = dataset.cut %>% dplyr::select(-LSTAT,-CHAS)
+R_quan2 <- cor(X_quan2)
 ```
 
 ### Mean vector
@@ -393,7 +390,7 @@ rownames(mean_vector_comp) <- c("Total Class", "Lower Class", "Medium-High Class
 knitr::kable(mean_vector_comp, caption="Mean vector")
 ```
 
-According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for the median value of prices. It means that an upper percentage of proportion of adults male laborers without some high school education implies a decrease in the median value of owner-occupied homes. 
+According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for *MEDV*. It means that an upper percentage of proportion of adults male laborers without some high school education implies a decrease in the median value of owner-occupied homes. This also happens with the variable *ZN*
 
 On the other hand, we can obtain conclusions from *CRIM* variable, since the mean for observations whose label is *low class* is quite lower than those whose label is *medium-high-class*. It means that in those suburbs in which working-class is the predominant, the crime rate is greater.
 
