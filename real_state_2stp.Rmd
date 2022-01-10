@@ -592,39 +592,56 @@ dim(X_pcs$rotation)
 X_pcs$rotation[,1:4]
 ```
 
-Now using the rotation attributes we can see how much each variable contribute to each principal component. This point is easier to do whith a plot:
+Now using the rotation attributes we can see how much each variable contribute to each principal component. The importance of each variable for each principal component is point is easier to do whith a plot:
 
 ```{r}
 plot(1:p,X_pcs$rotation[,1],pch=19,col="lightgreen",main="Weights for the first PC",
-     xlab="Variables",ylab="Score")
+     xlab="Variables",ylab="Score",ylim=c(-0.4,0.5))
 abline(h=0)
 text(1:p,X_pcs$rotation[,1],labels=colnames(X),pos=1,col="orange",cex=0.75)
 ```
 
+For the first principal component we can see that the most used features are INDUS, NOX, AGE, TAX, MEDV and RM.
+
+I can also be very useful to see which variables are important for two components:
+
 ```{r}
-plot(x=X_pcs$rotation[,1],y=X_pcs$rotation[,3],pch=19,col="green",main="Weights for the first four PCs")
+plot(x=X_pcs$rotation[,2],y=X_pcs$rotation[,3],pch=19,col="green",main="Weights for the first four PCs")
 abline(h=0,v=0)
-text(x=X_pcs$rotation[,1],y=X_pcs$rotation[,3],labels=colnames(X),pos=1,col="blue",cex=0.75)
+text(x=X_pcs$rotation[,2],y=X_pcs$rotation[,3],labels=colnames(X),pos=1,col="blue",cex=0.75)
 library(plotrix)
 draw.circle(0,0,0.3,border="orange",lwd=3)
 ```
 
-
-Let's see how it differentiates the groups for river or not
-
 ```{r}
-colors_X <- c("black","blue")[1*(clean_data$LSTAT==0)+1]
-par(mfrow=c(1,1))
-plot(X_pcs$x[,c(1,4)],pch=19,col=colors_X)
-```
-Now lets see how it differentiate in terms of pcas
-
-```{r}
-pairs(X_pcs$x[,1:4],col=colors_X,pch=19,main="The first four PCs")
+plot(1:p,X_pcs$rotation[,3],pch=19,col="lightgreen",main="Weights for the third PC",
+     xlab="Variables",ylab="Score")
+abline(h=0)
+text(1:p,X_pcs$rotation[,3],labels=colnames(X),pos=1,col="orange",cex=0.75)
 ```
 
+It is very interesting that plotting the weight for the third principal component, the variable *PTRATIO* has a weight of 0.759, which means that it is a very important variable for this component and if this component is key for group differentiation.
 
-The PCs show that the 4th PC is the key to show the two groups
+Now in order to see if we can easily find groups between the principal components, we can compute its scatter plot.
+
+```{r}
+pairs(X_pcs$x[,1:4],pch=19,main="The first four PCs",col="orange")
+```
+
+As it can be seen, it looks like that using PC1 and PC2 there could be two groups "well differentiated". Same thing happens using PC1 and PC3, whereas using PC2 and PC3 we could find up to 4 or 5 groups.
+
+Now, using the first and third principal components we are going to analyze if the differentiation is given by the CHAS variable or by the LSTAT variable that we created
+
+```{r}
+colors_CHAS <- c("red","blue")[1*(clean_data$CHAS==0)+1]
+colors_LSTAT <- c("orange","green")[1*(clean_data$LSTAT==0)+1]
+par(mfrow=c(1,2))
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_CHAS)
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_LSTAT)
+```
+
+Analyzing both of this plot we can conclude by saying that neither the CHAS feature and LSTAT are nor directly correlated with this categorization. 
+
 
 # Hierarchical clustering
 
