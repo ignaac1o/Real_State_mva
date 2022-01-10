@@ -1062,6 +1062,8 @@ As we can see in the plot above, there are no negative values associated. Theref
 
 ### Overview
 
+Let's make a plot which compares visually each method. In this case, we are going to use the first and the third PCA's components. 
+
 ```{r}
 par(mfrow=c(3,2))
 plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X,
@@ -1075,6 +1077,8 @@ plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X,
 plot(X_pcs$x[,c(1,3)],pch=19,col=colors_diana_X,
      main="First and third PCs",xlab="First PC",ylab="Third PC")
 ```
+
+As we can see, the methods that carry out the task of clustering with the best result are _average_ and _DIANA_. Nevertheless, as we saw in the silhouette plot, in the case of _DIANA_ there is no negative values associated, hence this would be the best strategy to implement in our data. 
 
 ### Hierarchical clustering with mixed variables
 
