@@ -119,14 +119,61 @@ clean_data=complete(imputation,2)
 
 For now on we will be using the dataset without NAs.
 
+## Data analysis
+
+Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
+
+- RAD.CAT: low, medium and high
+- RM.CAT: low, medium and high
+- INDUS.CAT: very low, low, high and very high 
+- LSTAT.CAT: Low-class, Medium-High-class
+- ZN.CAT: very low, low, high and very high
+
+Using this partition we are going to see if there are any groups that can be differentiated easily.
+
 ```{r}
 dataset.with.categories <- clean_data
 
-#Convert to factor
 dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS)
 
+factor_rad_values <- sort(unique(dataset.with.categories$RAD))
+delimiter_rad_index <- length(factor_rad_values)/3
+lower_delimiter_rad_value <- factor_rad_values[round(delimiter_rad_index)]
+upper_delimiter_rad_value <- factor_rad_values[round(2*delimiter_rad_index)]
 
+dataset.with.categories$RAD.CAT <- cut(dataset.with.categories$RAD,
+    breaks = c(-Inf, lower_delimiter_rad_value, upper_delimiter_rad_value, Inf),
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
 
+dataset.with.categories$RM.CAT <- cut(dataset.with.categories$RM,
+    breaks = c(-Inf, 4, 6, Inf),
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
+
+factor_indus_values <- sort(unique(dataset.with.categories$INDUS))
+delimiter_indus_index <- length(factor_indus_values)/4
+lower_delimiter_indus_value <- factor_indus_values[round(delimiter_indus_index)]
+mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
+upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
+
+dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS,
+    breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value,
+               upper_delimiter_indus_value, Inf),
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT,
+    breaks = c(-Inf, 25, Inf),
+    labels = c('Medium-High-class', 'Low-class'),
+    right = FALSE)
+
+dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN,
+    breaks = c(-Inf, 25, 50, 75, Inf),
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+str(dataset.with.categories)
 ```
 
 In order to visualize all the data and the different relations that it has, we are going to define a method to generate the kernel plots for continuous variables for all the groups in each category.
@@ -204,27 +251,21 @@ generate_kernel_by_cat_value <- function(x, cat, cat_value){
 
 ```
 
-Now we are going to use these functions to plot different continuous variables in order to get knowladge about the different groups.
+Now we are going to use these functions to plot different continuous variables in order to get knowledge about the different groups.
 
 ```{r fig.height=14}
 kernel_by_factors(dataset.with.categories$TAX, "TAX", "Set1")
 ```
 
-Within the first plot we can see how the variable TAX is distributed. It follows a bi-modal distribution, which means that there are two trends for the taxes paid. Notice that for high values on taxes, there is only one group that provides the weight for this second trend.  In particular, it happens with the plots associated to "RAD.CAT","INDUS.CAT" and "ZN.CAT". 
+Within the first plot we can see how the variable TAX is distributed. It follows a bi-modal distribution, which means that there are two trends for the taxes paid. Notice that for high values on taxes, there is only one group that provides the weight for this second trend.  In particular, it happens with the plots associated to "RAD.CAT","INDUS.CAT" and "ZN.CAT". Nevertheless, there is not a strong differentiation between the distributions for each group except for the LSTAT.CAT.
 
-Now, let's analyze the median price of the houses.
+Now, let's analyze the median price of the houses and see how different groups are distributed.
 
 ```{r fig.height=14}
-kernel_by_factors(dataset.with.categories$MEDV, "MEDV", "Dark2")
+kernel_by_factors(dataset.with.categories$MEDV, "CHAS", "Dark2")
 ```
 
-We can see that for the median value of houses from different suburbs, it is difficult to distinguish distributions for different groups. However, we can see a difference in the variable LSTAT.CAT, as the density curves are significantly different for both classes in terms of skewness.
-
-```{r}
-ggplot(data=dataset.with.categories,aes(y=MEDV,x=LSTAT))+geom_point(aes(colour=LSTAT.CAT))
-```
-
-Within the scatter plot we can easily visualize the difference of populations. The lower percentage of people considered low-class the higher the price of houses.
+We can see that for the median value of houses from different suburbs, it is difficult to distinguish distributions for different groups. However, we can again see a difference in the variable LSTAT.CAT, as the density curves are significantly different for both classes in terms of skewness.
 
 For the CRIM variable we are going to apply logarithm in order to obtain a better visualization of the plot, due to the strong skewness.
 
@@ -232,7 +273,7 @@ For the CRIM variable we are going to apply logarithm in order to obtain a bette
 kernel_by_factors(log(dataset.with.categories$CRIM+1), "CRIM", "Paired")
 ```
 
-Again, the density curves for the CRIME variable do classify different populations easily. We can see for example that there is a big difference in the kurtosis for each group in LSTAT. We can see that for high-classes, the index of criminality is centered close to 0, whereas for low classes, it takes higher indexes.
+Again, the density curves for the CRIME variable do not classify different populations easily. We can only see for example that there is a big difference in the kurtosis for each group in LSTAT. We can see that for high-classes, the index of criminality is centered close to 0, whereas for low classes, it takes higher indexes.
 
 We can easily check this big difference in the median values using boxplots.
 
@@ -242,28 +283,26 @@ ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) +
                 outlier.size=2) + ylim(c(0,50))
 ```
 
-We are going to visualize the PCP plot grouping the values by the categorical variable: _RAD.CAT_ (the visualization is in blue for low, green for medium and orange for high): 
-
-```{r fig.width=14}
-color_rad_cat=c("blue","green","orange2")[dataset.with.categories$RAD.CAT]
-parcoord(dataset.with.categories[,c(1,5,7:8,11,12,14)],col=color_rad_cat,var.label=TRUE)
-```
-
-We can see that for high _RAD.CAT_ the variables more affected are CRIM, AGE and DIS. Nevertheless, we will analyze this plot deeper in the outlier section.
-
-Let's plot the andrews curve:
+Now, let's plot the andrews curve to see if we can find anything interesting:
 
 ```{r fig.width=14}
 library(andrews)
 par(mfrow=c(1,1))
-andrews(df=as.data.frame(cbind(dataset[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
+andrews(df=as.data.frame(cbind(clean_data[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
 ```
 
 We have realized that there are a few outliers in the dataset, this is represented as an isolated line. Let's talk later on about this topic.
 
+Through this analysis we have seen that there is not a big differentiation in the groups that we splitted in the first place except for the one name LSTAT.CAT, where we could see some differences. Therefore, we are going to convert them all to quantitative variables (except LSTATCAT) in order to continue with our analysis.
+
+```{r}
+clean_data$LSTAT=dataset.with.categories$LSTAT.CAT
+clean_data$CHAS=dataset.with.categories$CHAS
+```
+
 ## Characteristics of the quantitative variables
 
-The goal of this step is the estimation of the main characteristics of the quantitative variables. After the aggregation of some continuous variables, our dataset finally contains four continuous variables: *MEDV*, *TAX*, *NOX* and *CRIME*. 
+The goal of this step is the estimation of the main characteristics of the quantitative variables. 
 
 We have to consider that our data come from an homogeneous population. As we have seen in the previous step, exploratory analysis has suggested that we can split data in different groups. Hence, in order to check this assumption we will do inference over data estimating the mean vector, covariance matrix and correlation matrix. Therefore, we will be able to state each group formed belongs to a different population separately.
 
@@ -309,11 +348,10 @@ $$
 
 knowing that ${r}_{jk}$ with $j\neq	k$ is computed with expression ${r}_{jk} = \frac{{s}_{jk}}{{s}_{j}{s}_{k}}$ which is the sample correlation coefficient between $x_j$ and $x_k$.
 
-
-From the conclusions obtained  in the  analysis step, we will compute the previous expressions. We have identified a group formed by the qualitative variable *LSTAT.CAT* and the four quantitative attributes left, as we consider that any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
+From the conclusions obtained  in the  analysis step, we will compute the previous expressions. We have identified a group formed by the qualitative variable *LSTAT.CAT* and all the quantitative, as we consider that any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
 
 ```{r}
-X_quan = dataset.with.categories %>% dplyr::select(TAX, MEDV, CRIM, NOX)
+X_quan = clean_data %>% dplyr::select(-CHAS,-LSTAT)
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION FOR QUANTITATIVE VARIABLES
 m_quan <- colMeans(X_quan)
@@ -322,8 +360,8 @@ R_quan <- cor(X_quan)
 
 # LSTAT - QUATITATIVE VARIABLES
 # LSTAT: Two possibles categories 
-X_LSTAT_mhc <- X_quan[dataset.with.categories$LSTAT.CAT =="Medium-High-class",]
-X_LSTAT_lc <- X_quan[dataset.with.categories$LSTAT.CAT =="Low-class",]
+X_LSTAT_mhc <- X_quan[clean_data$LSTAT =="Medium-High-class",]
+X_LSTAT_lc <- X_quan[clean_data$LSTAT =="Low-class",]
 
 #SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= MEDIUM-HIGH-CLASS
 m_LSTAT_mhc <- colMeans(X_LSTAT_mhc)
@@ -337,14 +375,14 @@ R_LSTAT_lc <- cor(X_LSTAT_lc)
 
 #CORRELATION MATRIX FOR QUANTITATIVE VARIABLES AND LSTAT VARIABLE
 #Encoding LSTAT as a binary variable (0 = medium-high-class, 1 = low-class)
-dataset.cut <- dataset
-dataset.cut$LSTAT <- cut(dataset.cut$LSTAT, 
-                      breaks = c(-Inf, 25, Inf), 
-                      labels = c(0, 1),
-                      right = FALSE)
-dataset.cut$LSTAT <- as.numeric(levels(dataset.cut$LSTAT))[dataset.cut$LSTAT]
-X_quan2 = dataset %>% dplyr::select(TAX, MEDV, CRIM, NOX, LSTAT)
-R_quan2 <- cor(X_quan2)
+# dataset.cut <- dataset
+# dataset.cut$LSTAT <- cut(dataset.cut$LSTAT, 
+#                       breaks = c(-Inf, 25, Inf), 
+#                       labels = c(0, 1),
+#                       right = FALSE)
+# dataset.cut$LSTAT <- as.numeric(levels(dataset.cut$LSTAT))[dataset.cut$LSTAT]
+# X_quan2 = dataset %>% dplyr::select(TAX, MEDV, CRIM, NOX, LSTAT)
+# R_quan2 <- cor(X_quan2)
 ```
 
 ### Mean vector
@@ -493,7 +531,11 @@ clean_data$LSTAT.CAT <- cut(clean_data$LSTAT,
     labels = c('Medium-High-class', 'Low-class'),
     right = FALSE)
 
-X=clean_data
+library(scales)
+data_scale=clean_data
+data_scale=as.data.frame(scale(data_scale))
+
+X=data_scale
 X$CHAS=NULL
 X$LSTAT=NULL
 X$LSTAT.CAT=NULL
@@ -513,26 +555,28 @@ And we plot all the variables
 ```{r}
 par(mfrow=c(4,5))
 sapply(names(X),function(cname){hist(X[[cname]],main=cname,col="blue")})
+
+
 ```
 We transform some variables and take logs
 
 ```{r}
 X_trans <- X
-X_trans[,1] <- log(X[,1])
+X_trans[,1] <- log(X[,1]+10)
 colnames(X_trans)[1] <- "log_CRIM"
-X_trans[,2] <- log(X[,2]+1)
+X_trans[,2] <- log(X[,2]+10)
 colnames(X_trans)[2] <- "log_ZN"
-X_trans[,3] <- log(X[,3])
+X_trans[,3] <- log(X[,3]+10)
 colnames(X_trans)[3] <- "log_INDUS"
-X_trans[,7] <- log(X[,7])
+X_trans[,7] <- log(X[,7]+10)
 colnames(X_trans)[7] <- "log_DIS"
-X_trans[,8] <- log(X[,8])
+X_trans[,8] <- log(X[,8]+10)
 colnames(X_trans)[8] <- "log_RAD"
-X_trans[,11] <- log(X[,11])
+X_trans[,11] <- log(X[,11]+10)
 colnames(X_trans)[11] <- "log_B"
-#X_trans[,12] <- log(X[,12])
+#X_trans[,12] <- log(X[,12]+10)
 #colnames(X_trans)[12] <- "log_LSTAT"
-X_trans[,12] <- log(X[,12])
+X_trans[,12] <- log(X[,12]+10)
 colnames(X_trans)[12] <- "log_MEDV"
 
 par(mfrow=c(4,5))
@@ -547,7 +591,7 @@ head(X_pcs$x)
 ```{r}
 library(factoextra)
 fviz_eig(X_pcs,ncp=17,addlabels=T,barfill="lightblue",barcolor="green")
-get_eigenvalue(X_pcs)
+a=get_eigenvalue(X_pcs)
 ```
 
 Using jut 6 PCA we can explain almost a 90% of the information in the dataset.
@@ -555,7 +599,7 @@ Using jut 6 PCA we can explain almost a 90% of the information in the dataset.
 
 ```{r}
 dim(X_pcs$rotation)
-X_pcs$rotation[,1:6]
+X_pcs$rotation[,1:5]
 ```
 
 ```{r}
@@ -566,19 +610,20 @@ text(1:p,X_pcs$rotation[,1],labels=colnames(X),pos=1,col="green",cex=0.75)
 ```
 
 ```{r}
-plot(X_pcs$rotation[,1:4],pch=19,col="green",main="Weights for the first four PCs")
+plot(x=X_pcs$rotation[,1],y=X_pcs$rotation[,3],pch=19,col="green",main="Weights for the first four PCs")
 abline(h=0,v=0)
-text(X_pcs$rotation[,1:4],labels=colnames(X),pos=1,col="blue",cex=0.75)
+text(x=X_pcs$rotation[,1],y=X_pcs$rotation[,3],labels=colnames(X),pos=1,col="blue",cex=0.75)
 library(plotrix)
 draw.circle(0,0,0.3,border="orange",lwd=3)
 ```
+
 
 Let's see how it differentiates the groups for river or not
 
 ```{r}
 colors_X <- c("black","blue")[1*(clean_data$LSTAT.CAT=="Medium-High-class")+1]
 par(mfrow=c(1,1))
-plot(X_pcs$x[,1:2],pch=19,col=colors_X)
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_X)
 ```
 Now lets see how it differentiate in terms of pcas
 
@@ -586,5 +631,87 @@ Now lets see how it differentiate in terms of pcas
 pairs(X_pcs$x[,1:4],col=colors_X,pch=19,main="The first four PCs")
 ```
 The PCs show that the 3rd PC is the key to show the two groups
+--------------------------------------------------------------
+
+(No vale)
+
+2nd Approach Shrinke 
+
+```{r}
+X_centred <- scale(X,scale=FALSE)
+S_shrink <- cov.shrink(X)
+S <- S_shrink[1:p,1:p]
+eig_S <- eigs_sym(S,12)
+eigen_vectors_S <- eig_S$vectors
+Z <- X_centred %*% eigen_vectors_S
+dim(Z)
+```
 
 
+Now lets see if we can see something using first 4 pcas
+
+```{r}
+plot(Z[,6],pch=19,col="blue")
+```
+We could differenciate 2 groups.
+
+Let's look at the eigen values
+
+```{r}
+eigen_values_S <- eig_S$values
+eigen_values_S
+```
+
+Obtain the proportion of variability explained by the PCs and the accumulated proportion of variability
+Note that a large number of PCs is needed to explain a large variability
+
+```{r}
+
+prop_var <- eigen_values_S/sum(eigen_values_S)
+acum_prop_var <- cumsum(eigen_values_S)/sum(eigen_values_S)
+cbind(prop_var,acum_prop_var)[1:12,]
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+plot(1:12,eigen_values_S[1:12],col="blue",type="b",xlab="Number",ylab="Eigenvalues",pch=19,main="Eigenvalues of shrinkage covariance")
+plot(1:12,acum_prop_var[1:12],col="blue",type="b",xlab="Number",ylab="Eigenvalues",pch=19,main="Accumulated eigenvalues")
+
+```
+Apparently, the first three PCs are the ones that explain most of the data set
+
+```{r}
+eigen_vectors_S <- eig_S$vectors
+dim(eigen_vectors_S)
+
+##################################################################################################################
+# Interpretation of the first PC: Loadings for the first PC
+
+par(mfrow=c(1,1))
+plot(1:p,eigen_vectors_S[,1],pch=20,col="blue",main="Loadings for the first PC",
+     xlab="Gene",ylab="First PC score")
+abline(h=0,lwd=2)
+```
+
+```{r}
+plot(1:p,eigen_vectors_S[,2],pch=20,col=color_1,main="Loadings for the second PC",
+     xlab="Gene",ylab="Second PC score")
+abline(h=0,lwd=2)
+```
+
+Again we can see two columns with very low values.
+
+
+```{r}
+plot(eigen_vectors_S[,1:2],pch=20,col=color_1,main="Loadings for the first two PCs",
+     xlab="First PC",ylab="Second PC")
+abline(h=0,v=0)
+library(plotrix)
+draw.circle(0,0,0.03,border=color_4,lwd=3)
+```
+
+```{r}
+pairs(Z[,1:9],col=color_1,pch=19,main="The first nine PCs")
+```
+Fist pca is key for differentiating groups.
