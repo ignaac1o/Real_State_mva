@@ -809,11 +809,11 @@ Then, once we have defined the number of cluster (k=2), we can apply clustering 
 optimal_k_clusters = 2
 ```
 
-## Agglomerative hierarchical clustering
+### Agglomerative hierarchical clustering
 
 This implementation goes from 1 observation equal to 1 kluster and then continues merging until k clusters:
 
-### Single linkage
+#### Single linkage
 
 ```{r, fig.width=12, fig.height=12}
 man_dist_X <- daisy(X,metric="manhattan",stand=FALSE)
@@ -864,7 +864,7 @@ plot(sil_single_X,col=colors[1])
 
 According to the silhouette plot, there are a few observations that weren't well grouped as the value is negative. 
 
-### Complete linkage
+#### Complete linkage
 
 ```{r, fig.width=12, fig.height=12}
 # Complete linkage
@@ -911,7 +911,7 @@ plot(sil_complete_X,col=colors[1])
 
 This graph is similar to the one plotted in the previous method.
 
-### Average linkage
+#### Average linkage
 
 ```{r, fig.width=12, fig.height=12}
 # Average linkage
@@ -957,7 +957,7 @@ plot(sil_average_X,col=colors[1])
 
 Here, we can see a better result on the way of grouping observations due to the fact that there are no negative values or, if they are, the absolute value is low.
 
-### Ward linkage
+#### Ward linkage
 
 ```{r, fig.width=12, fig.height=12}
 # Ward linkage
@@ -1004,7 +1004,7 @@ plot(sil_ward_X,col=colors[1])
 
 As we commented, this method doesn't do a proper job clustering observations.
 
-## Divisive Hierarchical Clustering
+### Divisive Hierarchical Clustering
 
 This implementation goes from considering all the dataset as one group and then continues dividing it until obtaining k clusters:
 
@@ -1029,7 +1029,6 @@ rect.hclust(diana_X, k=optimal_k_clusters, border=colors[1])
 # See the assignment
 
 cl_diana_X <- cutree(diana_X, optimal_k_clusters)
-cl_diana_X
 table(cl_diana_X)
 
 ```
@@ -1061,7 +1060,7 @@ plot(sil_diana_X,col=colors[1])
 
 As we can see in the plot above, there are no negative values associated. Therefore, we would say that this approach is the best one so far, as we still have to try how model-based clustering methods work on this dataset.
 
-## Overview
+### Overview
 
 ```{r}
 par(mfrow=c(3,2))
@@ -1077,6 +1076,66 @@ plot(X_pcs$x[,c(1,3)],pch=19,col=colors_diana_X,
      main="First and third PCs",xlab="First PC",ylab="Third PC")
 ```
 
+### Hierarchical clustering with mixed variables
+
+Let's apply the hierarchical clustering with mixed variables, which means that categorical variables are also valid using the Gower distance.
+
+#### Agglomerative hierarchical clustering
+
+Let's do the same we have done above using the distance Gower with agglomerative hierarchical clustering and compare results:
+
+```{r, fig.width=10, fig.height=10}
+# Ward linkage
+
+X_Gower_mat <- daisy(X_quan, metric = "gower")
+
+methods <- c("single", "complete", "average", "ward.D")
+
+for(method_hclust in methods) {
+  
+  h_method_X <- hclust(X_Gower_mat, method=method_hclust)
+  cl_method_X <- cutree(h_method_X, optimal_k_clusters)
+  colors_method_X <- c(colors[1],colors[2])[cl_method_X]
+  sil_method_X <- silhouette(cl_method_X, X_Gower_mat)
+  
+  par(mfrow=c(2,2))
+  plot(h_method_X, main="Gower hclust", cex=0.8)
+  rect.hclust(h_method_X, k=optimal_k_clusters, border=colors[1])
+  plot(X_pcs$x[,c(1,3)], pch=19, col=colors_method_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+  plot(sil_method_X,col=colors[1], main="")
+  mtext(method_hclust, side = 3, line = 0, outer = TRUE)
+  
+}
+
+```
+
+#### Divisive Hierarchical Clustering
+
+Let's do the same with divisive hierarchical clustering and compare results:
+
+```{r, fig.width=12, fig.height=12}
+
+diana_X <- diana(X_quan, metric="gower")
+
+par(mfrow=c(2,2))
+
+pltree(diana_X, cex = 0.8, hang = -1, main = "Dendrogram of diana")
+rect.hclust(diana_X, k=optimal_k_clusters, border=colors[1])
+
+cl_diana_X <- cutree(diana_X, optimal_k_clusters)
+
+colors_diana_X <- c(colors[1],colors[2])[cl_diana_X]
+plot(X_pcs$x[,c(1,3)], pch=19, col=colors_diana_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+
+sil_diana_X <- silhouette(cl_diana_X,man_dist_X)
+plot(sil_diana_X,col=colors[1])
 
 
+```
 
+
+As we have seen, including categorical variables doesn't produce an improvement in the task of grouping our data. 
