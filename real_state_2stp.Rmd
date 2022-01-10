@@ -25,7 +25,8 @@ library(andrews)
 library(corrplot)
 library(rrcov)
 library(mice)
-
+library(cluster)
+library(factoextra)
 
 dataset <- read.csv("Dataset.csv")
 ```
@@ -630,20 +631,130 @@ pairs(X_pcs$x[,1:4],pch=19,main="The first four PCs",col="orange")
 
 As it can be seen, it looks like that using PC1 and PC2 there could be two groups "well differentiated". Same thing happens using PC1 and PC3, whereas using PC2 and PC3 we could find up to 4 or 5 groups.
 
-Now, using the first and third principal components we are going to analyze if the differentiation is given by the CHAS variable or by the LSTAT variable that we created
+Now, using the first and third principal components we are going to analyze if the differentiation is given by the CHAS variable or by the LSTAT variable that we created.
+
+## Partitional clustering methods
+
+The idea of partitional methods is to find the best of multiple partitions which provide us with the best of all the possible solutions. It can be achieved minimizing the $WSS_k$, i.e. the within-cluster sums of squares where $k$ is the number of clusters. The main method for achieve this is through K-means algorithm.  
+
+Before we apply K-means algorithm, we must choose the suitable number of clusters. For this purpose, we will use different methods. First, we select this value $k$ with $WSS_k$: 
 
 ```{r}
-colors_CHAS <- c("red","blue")[1*(clean_data$CHAS==0)+1]
-colors_LSTAT <- c("orange","green")[1*(clean_data$LSTAT==0)+1]
-par(mfrow=c(1,2))
-plot(X_pcs$x[,c(1,3)],pch=19,col=colors_CHAS)
-plot(X_pcs$x[,c(1,3)],pch=19,col=colors_LSTAT)
+library("factoextra")
+fviz_nbclust(X,kmeans,method="wss",k.max=10)
+```
+This method is useful when the curve has an important decrease first and then the value of $WSS_k$ stabilizes. Therefore, the plot does not allow us to identify clearly the optimal number for $k$ as we cannot see that significant decrease mentioned. However, the most important decline corresponds to $k=2$. Nevertheless we will apply the rest of methods to check this selection.
+
+Now, we try to find the optimal value of k using the average silhouette.
+
+```{r}
+fviz_nbclust(X,kmeans,method="silhouette",k.max=10)
 ```
 
-Analyzing both of this plot we can conclude by saying that neither the CHAS feature and LSTAT are nor directly correlated with this categorization. 
+The optimal value of k for this method is 2. Let's see the last of the methods.
+
+```{r}
+gap_stat <- clusGap(X,FUN=kmeans,K.max=10,B=100)
+fviz_gap_stat(gap_stat,linecolor="steelblue",maxSE=list(method="firstmax",SE.factor = 1))
+```
+The suitable value of k for Gap statistic method is 5. However, this choice usually tends to select a large value for the number of clusters. Thus, we will apply the algorithm K-Means for value of k=2.
+
+After we apply the algorithm, we plot the different clusters using the PCA components obtained before. We have identified previously that PCA components 1 and 3 are able to distinguish different groups. 
+
+```{r}
+k_means <- kmeans(X,centers=2,iter.max=1000,nstart=100)
+colors_kmeans <- c("green","blue")[k_means$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_kmeans,main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+Even though there are instances overlapping, both clusters are well differentiated. Let's see how well is the assignment done.
+
+```{r, fig.width=5, fig.height=5}
+sil_kmeans <- silhouette(k_means$cluster,dist(X,"euclidean"))
+plot(sil_kmeans,col="green")
+```
+
+The average silhouette is 0.37. It indicates the assignment is reasonable but not perfect as the value is true positive but not much large.
+
+Now, we apply K-Medoids algorithm. This algorithm replace the sample mean vector by the central observations of the cluster configured. Since the number of outliers in our dataset is large, it will affect to the configuration of the new clusters.
+
+### PAM
+
+```{r}
+pam_X <- pam(X,k=2,metric="manhattan",stand=FALSE)
+colors_pam <- c("green","blue")[pam_X$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_pam,main="First and second PCs",xlab="First PC",ylab="Third PC")
+```
 
 
-# Hierarchical clustering
+Let's analyze the assignment done.
+
+```{r, fig.height=5, fig.width=5}
+sil_pam_X <- silhouette(pam_X$cluster,dist(X,method="manhattan"))
+plot(sil_pam_X,col="blue")
+```
+
+As we have mentioned, the average silhouette increases with PAM algorithm. 
+
+We will also implement CLARA algorithm to see if we get better results even though this method is often used with large data sets.
+
+```{r}
+clara_X <- clara(X,k=2,metric="manhattan",stand=FALSE)
+colors_clara_X <- c("green","blue")[clara_X$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_clara_X,main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+
+
+```{r, fig.height=5, fig.width=5}
+sil_clara_X <- silhouette(clara_X$cluster,dist(X,method="manhattan"))
+plot(sil_clara_X,col="green")
+```
+
+As we can see the average solhouette is the same.
+
+```{r}
+colors_CHAS_X <- c("green","blue")[1*(clean_data$CHAS==1)+1]
+colors_LSTAT_X <- c("green","blue")[1*(clean_data$LSTAT==1)+1]
+par(mfrow=c(1,3))
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_CHAS_X,main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_LSTAT_X,main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_pam,main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+
+These plots indicate that there are no relationship between the groups formed by the qualitative variables and the groups formed with K-Medoids algorithm (the best method selected).
+
+### PAM with Grow distance
+
+For this
+
+```{r}
+X.qual <- clean_data
+X_Gower <- daisy(X.qual,metric="gower")
+
+X_Gower_mat <- as.matrix(X_Gower)
+X[which(X_Gower_mat==min(X_Gower_mat[X_Gower_mat!=min(X_Gower_mat)]),arr.ind = TRUE)[1,],]
+X[which(X_Gower_mat==max(X_Gower_mat[X_Gower_mat!=max(X_Gower_mat)]),arr.ind = TRUE)[1,],]
+
+X_K <- matrix(NA,nrow=1,ncol=19)
+for (i in 1:19){
+  pam_X_Gower_mat <- pam(X_Gower_mat,k=i+1,diss=TRUE)
+  X_K[i] <- pam_X_Gower_mat$silinfo$avg.width
+}
+
+plot(2:20,X_K,pch=19,col="deepskyblue2",xlab="Number of clusters",ylab="Average silhouette")
+which.max(X_K)+1
+```
+
+Looks like the best solution is k=2.
+
+```{r,fig.height=5, fig.width=5}
+pam_X_Gower_mat <- pam(X_Gower_mat,k=2,diss=TRUE)
+X.qual[pam_X_Gower_mat$medoids,]
+sil_pam_X_Gower_mat <- silhouette(pam_X_Gower_mat$cluster,X_Gower_mat)
+plot(sil_pam_X_Gower_mat,col="green")
+summary(sil_pam_X_Gower_mat)
+```
+
+## Hierarchical clustering
 
 ```{r}
 colors = brewer.pal(n=7, name="Dark2")
