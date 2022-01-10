@@ -28,6 +28,8 @@ library(mice)
 library(kableExtra)
 library(cluster)
 library(factoextra)
+library(RSpectra)
+library(corpcor)
 
 dataset <- read.csv("Dataset.csv")
 ```
@@ -801,33 +803,19 @@ summary(sil_pam_X_Gower_mat)
 
 ## Hierarchical clustering
 
+Then, once we have defined the number of cluster (k=2), we can apply clustering using another strategy called hierarchical, being two main ways of implementing it:
+
 ```{r}
-colors = brewer.pal(n=7, name="Dark2")
-
-if (!require(corpcor)) install.packages("corpcor")
-library(corpcor)
-#X <- data.matrix(clean_data)
-#X <- X[,-4]
-#p <- dim(X)[2]
-#S_shrink <- cov.shrink(X)
-#S <- S_shrink[1:p,1:p]
-if (!require(RSpectra)) install.packages("RSpectra")
-library(RSpectra)
-#eig_S <- eigs_sym(S,2)
-#X_centred <- scale(X,scale=FALSE)
-#eigen_vectors_S <- eig_S$vectors[,1:2]
-Z <- X_pcs$x[, c(1,3)]
-#Z <- X_centred %*% eigen_vectors_S
-#plot(Z,pch=19,col=colors[1],main="First two PCs for the data set",xlab="First PC",ylab="Second PC")
-
+optimal_k_clusters = 2
 ```
+
 ## Agglomerative hierarchical clustering
+
+This implementation goes from 1 observation equal to 1 kluster and then continues merging until k clusters:
 
 ### Single linkage
 
 ```{r, fig.width=12, fig.height=12}
-if (!require(cluster)) install.packages("cluster")
-library(cluster)
 man_dist_X <- daisy(X,metric="manhattan",stand=FALSE)
 
 # Single linkage
@@ -837,37 +825,44 @@ single_X <- hclust(man_dist_X,method="single")
 # Plot dendogram of the solution for k=5 as in K-means
 
 plot(single_X,main="Single linkage",cex=0.8)
-rect.hclust(single_X,k=5,border=colors[1])
+rect.hclust(single_X, 
+            k=optimal_k_clusters, 
+            border=colors[1])
 
 # See the assignment
 
-cl_single_X <- cutree(single_X,5)
+cl_single_X <- cutree(single_X,optimal_k_clusters)
 table(cl_single_X)
 
 ```
+
+As we can see in the tree and table above, it has been generated 2 clusters (as it was indicated earlier) that are not well-balanced.
 
 ```{r}
 
 # Make a plot of the first two PCs with the five clusters
 
-colors_single_X <- 
-  c(colors[1],colors[2],colors[3],colors[4],colors[5])[cl_single_X]
-plot(Z,pch=19,col=colors_single_X,
-     main="First two PCs for the cancer cells data set",
-     xlab="First PC",ylab="Second PC")
+colors_single_X <- c(colors[1],colors[2])[cl_single_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
 
 ```
+
+As we can see in the PCA's component 1st and 3rd, the aggregation dind't go that well, as there is some data overlapped.
 
 ```{r, fig.width=12, fig.height=8}
 
 # Have a look at the silhouette
 
-sil_single_X <- silhouette(cl_single_X,man_dist_X)
+sil_single_X <- silhouette(cl_single_X, man_dist_X)
 plot(sil_single_X,col=colors[1])
 
 # This solution is not the best
 
 ```
+
+According to the silhouette plot, there are a few observations that weren't well grouped as the value is negative. 
 
 ### Complete linkage
 
@@ -878,69 +873,77 @@ complete_X <- hclust(man_dist_X,method="complete")
 
 # Plot dendogram of the solution for k=5 as in K-means
 
-plot(complete_X,main="Complete linkage",cex=0.8)
-rect.hclust(complete_X,k=5,border=colors[1])
+plot(complete_X, main="Complete linkage",cex=0.8)
+rect.hclust(complete_X, k=optimal_k_clusters, border=colors[1])
 
 # See the assignment
 
-cl_complete_X <- cutree(complete_X,5)
+cl_complete_X <- cutree(complete_X, optimal_k_clusters)
 table(cl_complete_X)
 
 ```
+
+As well, in this case data is not well balanced. 
 
 ```{r}
 
 # Make a plot of the first two PCs with the five clusters
 
-colors_complete_X <- 
-  c(colors[1],colors[2],colors[3],colors[4],colors[5])[cl_complete_X]
-plot(Z,pch=19,col=colors_complete_X,
-     main="First two PCs for the cancer cells data set",
-     xlab="First PC",ylab="Second PC")
+colors_complete_X <- c(colors[1],colors[2])[cl_complete_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_complete_X,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
 
 ```
+
+We would say that this aggregation is slighly better than the previous one, although it is not so good.
 
 ```{r, fig.width=12, fig.height=12}
 
 # Have a look at the silhouette
 
-sil_complete_X <- silhouette(cl_complete_X,man_dist_X)
+sil_complete_X <- silhouette(cl_complete_X, man_dist_X)
 plot(sil_complete_X,col=colors[1])
 
 # This solution is better but not as good as the ones from partition methods
 
 ```
 
+This graph is similar to the one plotted in the previous method.
+
 ### Average linkage
 
 ```{r, fig.width=12, fig.height=12}
 # Average linkage
 
-average_X <- hclust(man_dist_X,method="average")
+average_X <- hclust(man_dist_X, method="average")
 
 # Plot dendogram of the solution for k=5 as in K-means
 
-plot(average_X,main="Average linkage",cex=0.8)
-rect.hclust(average_X,k=5,border=colors[1])
+plot(average_X, main="Average linkage", cex=0.8)
+rect.hclust(average_X, k=optimal_k_clusters, border=colors[1])
 
 # See the assignment
 
-cl_average_X <- cutree(average_X,5)
+cl_average_X <- cutree(average_X, optimal_k_clusters)
 table(cl_average_X)
 
 ```
+
+Similar aggregation.
 
 ```{r}
 
 # Make a plot of the first two PCs with the five clusters
 
-colors_average_X <- 
-  c(colors[1],colors[2],colors[3],colors[4],colors[5])[cl_average_X]
-plot(Z,pch=19,col=colors_average_X,
-     main="First two PCs for the cancer cells data set",
-     xlab="First PC",ylab="Second PC")
+colors_average_X <- c(colors[1],colors[2])[cl_average_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_average_X,
+     main="First two PCs for the Boston Housing data set",
+     xlab="First PC",ylab="Third PC")
 
 ```
+
+Now we can see that this method splits then data in two groups without overlapping, thus it could be a good final choice however we are going to compute the remaining methods in order to know if this can be improved. 
 
 ```{r, fig.width=12, fig.height=12}
 
@@ -952,6 +955,8 @@ plot(sil_average_X,col=colors[1])
 # This solution is not the best as there are a few points overlapped 
 ```
 
+Here, we can see a better result on the way of grouping observations due to the fact that there are no negative values or, if they are, the absolute value is low.
+
 ### Ward linkage
 
 ```{r, fig.width=12, fig.height=12}
@@ -961,27 +966,30 @@ ward_X <- hclust(man_dist_X,method="ward.D")
 
 # Plot dendogram of the solution for k=5 as in K-means
 
-plot(ward_X,main="Ward linkage",cex=0.8)
-rect.hclust(ward_X,k=5,border=colors[1])
+plot(ward_X, main="Ward linkage", cex=0.8)
+rect.hclust(ward_X, k=optimal_k_clusters, border=colors[1])
 
 # See the assignment
 
-cl_ward_X <- cutree(ward_X,5)
+cl_ward_X <- cutree(ward_X, optimal_k_clusters)
 table(cl_ward_X)
 
 ```
+
+Same as before.
 
 ```{r}
 
 # Make a plot of the first two PCs with the five clusters
 
-colors_ward_X <- 
-  c(colors[1],colors[2],colors[3],colors[4],colors[5])[cl_ward_X]
-plot(Z,pch=19,col=colors_ward_X,
-     main="First two PCs for the cancer cells data set",
-     xlab="First PC",ylab="Second PC")
+colors_ward_X <- c(colors[1],colors[2])[cl_ward_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
 
 ```
+
+The chart above represents some observations grouped with overlapping. Therefore, it doesn't look like a good way of clustering for our data.
 
 ```{r, fig.width=12, fig.height=12}
 
@@ -994,7 +1002,11 @@ plot(sil_ward_X,col=colors[1])
 
 ```
 
+As we commented, this method doesn't do a proper job clustering observations.
+
 ## Divisive Hierarchical Clustering
+
+This implementation goes from considering all the dataset as one group and then continues dividing it until obtaining k clusters:
 
 ```{r, fig.width=12, fig.height=12}
 
@@ -1012,26 +1024,29 @@ pltree(diana_X, cex = 0.8, hang = -1, main = "Dendrogram of diana")
 # The heights here are the diameters of the clusters before splitting
 # Take k=5
 
-rect.hclust(diana_X,k=5,border=colors[1])
+rect.hclust(diana_X, k=optimal_k_clusters, border=colors[1])
 
 # See the assignment
 
-cl_diana_X <- cutree(diana_X,5)
+cl_diana_X <- cutree(diana_X, optimal_k_clusters)
 cl_diana_X
 table(cl_diana_X)
 
 ```
 
+Same as commented before, there are two non well-balanced groups.
+
 ```{r}
 # Make a plot of the first two PCs with the five clusters
 
-colors_diana_X <- 
-  c(colors[1],colors[2],colors[3],colors[4],colors[5])[cl_diana_X]
-plot(Z,pch=19,col=colors_diana_X,
-     main="First two PCs for the cancer cells data set",
-     xlab="First PC",ylab="Second PC")
+colors_diana_X <- c(colors[1],colors[2])[cl_diana_X]
+plot(X_pcs$x[,c(1,3)], pch=19, col=colors_diana_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
 
 ```
+
+It looks like this method groups the data in a similar way that the _Average Linkage_ did. Both of them could be valid for clustering. Let's take a look to the silhouette plot:
 
 ```{r, fig.width=12, fig.height=12}
 
@@ -1043,5 +1058,25 @@ plot(sil_diana_X,col=colors[1])
 # This solution is probably the best one among the hierarchical clustering methods
 
 ```
+
+As we can see in the plot above, there are no negative values associated. Therefore, we would say that this approach is the best one so far, as we still have to try how model-based clustering methods work on this dataset.
+
+## Overview
+
+```{r}
+par(mfrow=c(3,2))
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X,
+      main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_complete_X,
+      main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_average_X,
+      main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X,
+       main="First and third PCs",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_diana_X,
+     main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+
+
 
 
