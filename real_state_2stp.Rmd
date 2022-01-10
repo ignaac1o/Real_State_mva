@@ -752,7 +752,7 @@ plot(sil_clara_X,col="green")
 
 As we can see the average solhouette is the same.
 
-```{r}
+```{r, fig.height=10}
 colors_CHAS_X <- c("green","blue")[1*(clean_data$CHAS==1)+1]
 colors_LSTAT_X <- c("green","blue")[1*(clean_data$LSTAT==1)+1]
 par(mfrow=c(2,2))
