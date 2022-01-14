@@ -3,7 +3,6 @@
 .RData
 .Ruserdata
 .DS_Store
-real_state.pdf
-real_state_2stp.pdf
+real_state*.pdf
+real_state*.log
 real_state_files/
-real_state_2stp.log
