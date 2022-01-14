@@ -1,0 +1,1081 @@
+---
+title: "Assignment - Midterm - Boston Housing"
+subtitle: "Multivariate Analysis"
+author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
+date: "12/12/2021"
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{mathtools}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  fig.align = 'center')
+```
+
+First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(MASS)
+library(RColorBrewer)
+library(GGally)
+library(andrews)
+library(corrplot)
+library(rrcov)
+library(mice)
+library(kableExtra)
+library(cluster)
+library(factoextra)
+library(RSpectra)
+library(corpcor)
+
+dataset <- read.csv("Dataset.csv")
+```
+
+## Variables explanation
+
+This dataset has been taken from [Kaggle](https://www.kaggle.com/c/boston-housing) and it contains information about housing market suburbs in Boston. It contains 511 observations which represent different suburbs in Boston area. It is formed by 14 variables, which are:
+
+- _CRIM_: This is a continuous variable that measures the crime per capital rate by town.
+- _ZN_: Continuous variable that indicates the proportion of residential land zoned for lots over 25,000 sq.ft. There are not many different values in this category. Could be also considered a categorical variable.
+- _INDUS_: Proportion of non-retail business acres per town. Continuous variable.
+- _CHAS_: It is a binary variable referred to Charles River (= 1 if tract bounds river; 0 otherwise).
+- _NOX_: Continuous variable that measures nitric oxides concentration (parts per 10 million).
+- _RM_: Measures the average number of rooms per dwelling. Continuous variable.
+- _AGE_: Continuous variable that measures the proportion of owner-occupied units built prior to 1940.
+- _DIS_: Continuous variable that indicates the weighted distances to five Boston employment centers.
+- _RAD_: Index of accessibility to radial highways. Larger index denotes better accessibility.
+- _TAX_: Continuous variable full-value property-tax rate per $10,000.
+- _PTRATIO_: Continuous variable that measures the proportion of pupil-teacher by town.
+- _B_: Is a continuous variable based on the formula 1000(Bk - 0.63)^2, where BK is the proportion of black people.
+- _LSTAT_: Continuous variable that measures the proportion of adults without, some high school education and proportion of male workers classified as laborers.
+- _MEDV_: Continuous variable with the median value price of owner-occupied homes in $1000's
+
+## Imputation of missing values
+
+Missing values are a very frequent problem that appears in almost every dataset. Therefore, it is important to know how to deal with them.
+
+There are several ways to impute missing values. One of the easiest is based on deleting all the observations that contains missing values. This could work if your dataset is very long and you do not have many NA, otherwise you will be deleting too much information. However, in practice, this is not a very common solution to deal with missing values.
+
+Another very popular solution is to replace all the missing values with the sample mean, sample median or sample mode, as these values are "close" to what could be expected for them. Nevertheless, this practice could be very dangerous in some cases. Imagine for example a binary variable, if we used the mean value to replace NAs it will give a value in between 1-0, which is not going to be a useful replacement.
+
+There are other methods to impute missing values that are based on predictions, which tempt to be the most efficient. Therefore, we will use them if needed. 
+
+First of all, we are going to build a function that summarizes if there are any NA in our dataset. 
+
+```{r, warning=FALSE}
+missingValues=function(data){
+  count=0
+  a=cbind(lapply(lapply(data, is.na), sum))
+  for(i in 1:ncol(data)){
+    if(a[i]!=0){
+      cat(as.integer(a[i]), "missing values in column ", i,"\n" )
+      count=count+1
+    }
+  }  
+    if(count==0){
+      cat("There are No missing values in this dataset")
+    }
+}
+
+missingValues(dataset)
+```
+
+We found that there are 5 missing values in the variable RM. In order to impute them, we are going to see different methods.
+
+First of all we are going to see how would it look to replace our missing values with the mean value of the variable.
+
+```{r, warning=FALSE}
+clean_data_mean=dataset
+index=which(is.na(dataset$RM))
+clean_data_mean$RM[index]=mean(clean_data_mean$RM,na.rm = TRUE)
+```
+
+As expected we replace all the missing value as the mean value of the column. However, as we mentioned before, using this method is very dangerous. Therefore, we are going to use some functions provided by the library "mice" that predicts the missing values based on the rest of the information contained in the dataset. 
+
+```{r, warning=FALSE,results=FALSE}
+set.seed(1234)
+#methods(mice)
+imputation=mice(dataset,m=5,method="pmm",maxit = 20)
+```
+
+As we specified that we wanted 5 predictions, the mice function will gives us 5 different predictions.
+
+```{r, warning=FALSE}
+imputation$imp$RM
+```
+
+Once we have the predictions we need a method to select which one is the better. It won't be a problem to use any of the ones obtained, however there are some useful tips that could help to choose the best one. As the mean value in our dataset is not very far away from the majority of the observations we really don't want any prediction to be very far away from the mean value. Therefore we are going to compute the errors between each prediction and the mean in order to see which one has less error.
+
+```{r, warning=FALSE}
+for(i in 1:5){
+    print(imputation$imp$RM[i]-clean_data_mean$RM[index])
+}
+```
+
+Looks like in this case, the second prediction is the best one, as the higher value for the error is 0.25. Therefore, we choose this prediction to compute our missing values.
+
+```{r, warning=FALSE}
+clean_data=complete(imputation,2)
+```
+
+For now on we will be using the dataset without NAs.
+
+## Data analysis
+
+Analyzing the different values taken by the variables we noticed that some of them can be categorized. Therefore, we have created some categorical variable from the original data to summarize this information:
+
+- RAD.CAT: low, medium and high
+- RM.CAT: low, medium and high
+- INDUS.CAT: very low, low, high and very high 
+- LSTAT.CAT: Low-class, Medium-High-class
+- ZN.CAT: very low, low, high and very high
+
+Using this partition we are going to see if there are any groups that can be differentiated easily.
+
+```{r}
+dataset.with.categories <- clean_data
+
+dataset.with.categories$CHAS <- factor(dataset.with.categories$CHAS)
+
+factor_rad_values <- sort(unique(dataset.with.categories$RAD))
+delimiter_rad_index <- length(factor_rad_values)/3
+lower_delimiter_rad_value <- factor_rad_values[round(delimiter_rad_index)]
+upper_delimiter_rad_value <- factor_rad_values[round(2*delimiter_rad_index)]
+
+dataset.with.categories$RAD.CAT <- cut(dataset.with.categories$RAD,
+    breaks = c(-Inf, lower_delimiter_rad_value, upper_delimiter_rad_value, Inf),
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
+
+dataset.with.categories$RM.CAT <- cut(dataset.with.categories$RM,
+    breaks = c(-Inf, 4, 6, Inf),
+    labels = c('low', 'medium', 'high'),
+    right = FALSE)
+
+factor_indus_values <- sort(unique(dataset.with.categories$INDUS))
+delimiter_indus_index <- length(factor_indus_values)/4
+lower_delimiter_indus_value <- factor_indus_values[round(delimiter_indus_index)]
+mid_delimiter_indus_value <- factor_indus_values[round(2*delimiter_indus_index)]
+upper_delimiter_indus_value <- factor_indus_values[round(3*delimiter_indus_index)]
+
+dataset.with.categories$INDUS.CAT <- cut(dataset.with.categories$INDUS,
+    breaks = c(-Inf, lower_delimiter_indus_value, mid_delimiter_indus_value,
+               upper_delimiter_indus_value, Inf),
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+dataset.with.categories$LSTAT.CAT <- cut(dataset.with.categories$LSTAT,
+    breaks = c(-Inf, 25, Inf),
+    labels = c('Medium-High-class', 'Low-class'),
+    right = FALSE)
+
+dataset.with.categories$ZN.CAT <- cut(dataset.with.categories$ZN,
+    breaks = c(-Inf, 25, 50, 75, Inf),
+    labels = c('very low', 'low', 'high', 'very high'),
+    right = FALSE)
+
+str(dataset.with.categories)
+```
+
+In order to visualize all the data and the different relations that it has, we are going to define a method to generate the kernel plots for continuous variables for all the groups in each category.
+
+```{r}
+kernel_by_factors <- function(x, x_name, type_color) {
+  factors <- Filter(is.factor, dataset.with.categories)
+  num_vars <- ncol(factors)
+  mod <- num_vars %% 2 
+  
+  colors = brewer.pal(n = num_vars + 1, name=type_color)
+
+  par(mfrow=c(num_vars+mod+1,2), mar=c(2,2,2,2))
+  plot(density(x,kernel="gaussian"),
+   ylab="Density",
+   main=paste0("Kernel density of ", x_name),
+   xlab=x_name,
+   col=colors[1],
+   lwd=5)
+  
+  index_factor <- 1
+  for(factor in factors) {
+    plot_kernel_charts(x, 
+                       factor[!is.na(factor)], 
+                       x_name, 
+                       names(factors[index_factor]), colors)
+    index_factor = index_factor + 1
+  }
+}
+
+plot_kernel_charts <- function(x, cat, x_name, cat_name, colors) {
+  cat_values <- levels(cat)
+  num_colors <- length(cat_values)
+  
+  min_x <<- c()
+  max_x <<- c()
+  min_y <<- c()
+  max_y <<- c()
+  
+  densities <<- list()
+  
+  for(cat_value in cat_values)
+    generate_kernel_by_cat_value(x, cat, cat_value)
+  
+  min_x <- min(min_x)
+  max_x <- max(max_x)
+  min_y <- min(min_y)
+  max_y <- max(max_y)
+  
+  plot(c(min_x,max_x),c(min_y,max_y),
+       xlab=x_name,
+       ylab="Density",
+       main=paste0("Kernel: ", x_name, " in terms of ", cat_name),
+       type="n")
+  legend(x="topright", legend=c(cat_values),col=colors[-1], lty=1, cex=0.8,
+     box.lty=0)
+  i <- 2
+  for(densitiy_by_cat in densities) {
+    lines(densitiy_by_cat$x, densitiy_by_cat$y, col=colors[i], lwd=1)
+    i = i + 1
+  }
+}
+
+generate_kernel_by_cat_value <- function(x, cat, cat_value){
+  if(length(cat[cat==cat_value]) > 2){
+    d_cat_value <- density(x[cat==cat_value], kernel="gaussian")
+    min_x <<- c(min_x, min(d_cat_value$x))
+    max_x <<- c(max_x, max(d_cat_value$x))
+    min_y <<- c(min_y, min(d_cat_value$y))
+    max_y <<- c(max_y, max(d_cat_value$y))
+    
+    densities <<- append(densities, list(d_cat_value))
+  }
+}
+
+```
+
+Now we are going to use these functions to plot different continuous variables in order to get knowledge about the different groups.
+
+```{r fig.height=14}
+kernel_by_factors(dataset.with.categories$TAX, "TAX", "Set1")
+```
+
+Within the first plot we can see how the variable TAX is distributed. It follows a bi-modal distribution, which means that there are two trends for the taxes paid. Notice that for high values on taxes, there is only one group that provides the weight for this second trend.  In particular, it happens with the plots associated to "RAD.CAT","INDUS.CAT" and "ZN.CAT". Nevertheless, there is not a strong differentiation between the distributions for each group except for the LSTAT.CAT.
+
+Now, let's analyze the median price of the houses and see how different groups are distributed.
+
+```{r fig.height=14}
+kernel_by_factors(dataset.with.categories$MEDV, "CHAS", "Dark2")
+```
+
+We can see that for the median value of houses from different suburbs, it is difficult to distinguish distributions for different groups. However, we can again see a difference in the variable LSTAT.CAT, as the density curves are significantly different for both classes in terms of skewness.
+
+For the CRIM variable we are going to apply logarithm in order to obtain a better visualization of the plot, due to the strong skewness.
+
+```{r fig.height=14}
+kernel_by_factors(log(dataset.with.categories$CRIM+1), "CRIM", "Paired")
+```
+
+Again, the density curves for the CRIME variable do not classify different populations easily. We can only see for example that there is a big difference in the kurtosis for each group in LSTAT. We can see that for high-classes, the index of criminality is centered close to 0, whereas for low classes, it takes higher indexes.
+
+We can easily check this big difference in the median values using boxplots.
+
+```{r, warning=FALSE}
+ggplot(dataset.with.categories, aes(y=CRIM, x=LSTAT.CAT)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=2) + ylim(c(0,50))
+```
+
+Now, let's plot the andrews curve to see if we can find anything interesting:
+
+```{r fig.width=14}
+library(andrews)
+par(mfrow=c(1,1))
+andrews(df=as.data.frame(cbind(clean_data[,c(1,5,7:8,11,12,14)],dataset.with.categories$CHAS)),clr=8,ymax=4)
+```
+
+We have realized that there are a few outliers in the dataset, this is represented as an isolated line. Let's talk later on about this topic.
+
+Through this analysis we have seen that there is not a big differentiation in the groups that we splitted in the first place except for the one name LSTAT.CAT, where we could see some differences. Therefore, we are going to convert them all to quantitative variables (except LSTATCAT) in order to continue with our analysis.
+
+```{r}
+clean_data$LSTAT=dataset.with.categories$LSTAT.CAT
+clean_data$CHAS=dataset.with.categories$CHAS
+```
+
+## Characteristics of the quantitative variables
+
+The goal of this step is the estimation of the main characteristics of the quantitative variables. 
+
+We have to consider that our data come from an homogeneous population. As we have seen in the previous step, exploratory analysis has suggested that we can split data in different groups. Hence, in order to check this assumption we will do inference over data estimating the mean vector, covariance matrix and correlation matrix. Therefore, we will be able to state each group formed belongs to a different population separately.
+
+The dataset is located in the scenario where there are more observations than variables (i.e. $n > p$, where $n$ is the number of observations which the dataset contains and $p$ the number of attributes). Thus, we will use the following expressions to compute the different estimations for a dataset with $n$ observations and $p$ variables:
+
+ - Estimation of $\mu$ as $E[\bar{x}]=\mu$, where $X = ({x}_{1},..., {x}_{p})^{T}$ and $\bar{x}$ is calculated as:
+ 
+
+$$
+\bar{x} = \frac{1}{n}\sum_{i=1}^{n}x_{i.} =
+\begin{pmatrix}
+ \bar{x}_{1}\\
+ \bar{x}_{2} \\
+ \vdots\\
+ \bar{x}_{p}
+\end{pmatrix}
+$$
+
+ - Estimation of $\sum$ as $E[S] = \sum$, where $S$ is the covariance matrix of $x = ({x}_{1},..., {x}_{p})^{T}$ and it is obtained as following:
+
+$$
+ S = \frac{1}{n-1}\sum_{i=1}^{n}(x_{i.}-\bar{x})(x_{i.}-\bar{x}) =
+\begin{pmatrix}
+ {s}_{1}^{2}&{s}_{12}^{2}&...&{s}_{1p}^{2}\\
+ {s}_{21}^{2}&{s}_{2}^{2}&...&{s}_{2p}^{2}\\
+ \vdots & \ddots & \ddots & \vdots \\
+ {s}_{n1}^{2}&{s}_{n2}^{2}&...&{s}_{p}^{2}
+\end{pmatrix}
+$$
+
+where ${s}_{p}^{2}$ is the sample variance of $x_j$ and ${s}_{jk}^{2}$ is the sample covariance bewteen $x_j$ and $x_k$ with $j\neq	k$.
+
+ - Estimation of correlation matrix of $X = ({x}_{1},..., {x}_{p})^{T}$ through covariance matrix as following:
+ 
+$$
+ R = 
+\begin{pmatrix}
+ 1&{r}_{12}&...&{r}_{1p}\\
+ {r}_{21}&1&...&{r}_{2p}\\
+ \vdots & \ddots & \ddots & \vdots \\
+ {r}_{n1}&{r}_{n2}&...&1
+\end{pmatrix}
+$$
+
+knowing that ${r}_{jk}$ with $j\neq	k$ is computed with expression ${r}_{jk} = \frac{{s}_{jk}}{{s}_{j}{s}_{k}}$ which is the sample correlation coefficient between $x_j$ and $x_k$.
+
+From the conclusions obtained  in the  analysis step, we will compute the previous expressions. We have identified a group formed by the qualitative variable *LSTAT.CAT* and all the quantitative, as we consider that any quantitative variable could be different for both of the two classes. Therefore, we will be able to see if certain attribute is related with other.
+
+```{r}
+X_quan = clean_data %>% dplyr::select(-CHAS,-LSTAT)
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION FOR QUANTITATIVE VARIABLES
+m_quan <- colMeans(X_quan)
+S_quan <- cov(X_quan)
+R_quan <- cor(X_quan)
+
+# LSTAT - QUATITATIVE VARIABLES
+# LSTAT: Two possibles categories 
+X_LSTAT_mhc <- X_quan[clean_data$LSTAT =="Medium-High-class",]
+X_LSTAT_lc <- X_quan[clean_data$LSTAT =="Low-class",]
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= MEDIUM-HIGH-CLASS
+m_LSTAT_mhc <- colMeans(X_LSTAT_mhc)
+S_LSTAT_mhc <- cov(X_LSTAT_mhc)
+R_LSTAT_mhc <- cor(X_LSTAT_mhc)
+
+#SAMPLE MEAN, COVARIANCE AND CORRELATION MATRIX FOR LSTAT <= LOW-CLASS
+m_LSTAT_lc <- colMeans(X_LSTAT_lc)
+S_LSTAT_lc <- cov(X_LSTAT_lc)
+R_LSTAT_lc <- cor(X_LSTAT_lc)
+
+#CORRELATION MATRIX FOR QUANTITATIVE VARIABLES AND LSTAT VARIABLE
+#Encoding LSTAT as a binary variable (0 = medium-high-class, 1 = low-class)
+dataset.cut <- clean_data
+dataset.cut$LSTAT=dataset.cut$LSTAT %>%  factor(levels = c("Low-class","Medium-High-class"),labels = c(1,0))
+X_quan2 = dataset.cut %>% dplyr::select(-LSTAT,-CHAS)
+R_quan2 <- cor(X_quan2)
+```
+
+### Mean vector
+
+```{r}
+mean_vector_comp <- rbind(m_quan, m_LSTAT_lc, m_LSTAT_mhc)
+rownames(mean_vector_comp) <- c("Total Class", "Lower Class", "Medium-High Class")
+knitr::kable(mean_vector_comp, caption="Mean vector", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+According to the plots seen before, we can see that the mean of the observations with "Low-class" is lower than those observations which belong to the other class for *MEDV*. It means that an upper percentage of proportion of adults male laborers without some high school education implies a decrease in the median value of owner-occupied homes. This also happens with the variable *ZN*
+
+On the other hand, we can obtain conclusions from *CRIM* variable, since the mean for observations whose label is *low class* is quite lower than those whose label is *medium-high-class*. It means that in those suburbs in which working-class is the predominant, the crime rate is greater.
+
+### Covariance matrix
+
+```{r}
+knitr::kable(S_quan, caption="Covariance Matrix: total classes", digits = 2) %>%
+  kable_styling(font_size = 7)
+knitr::kable(S_LSTAT_lc, caption="Covariance Matrix: lower class", digits = 2) %>%
+  kable_styling(font_size = 7)
+knitr::kable(S_LSTAT_mhc, caption="Covariance Matrix: medium high classes", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+### Correlation matrix
+
+```{r}
+knitr::kable(R_quan, caption="Correlation Matrix: total classes", digits = 2) %>%
+  kable_styling(font_size = 7)
+knitr::kable(R_LSTAT_lc, caption="Correlation Matrix: lower class", digits = 2)  %>%
+  kable_styling(font_size = 7)
+knitr::kable(R_LSTAT_mhc, caption="Correlation Matrix: medium high classes", digits = 2) %>%
+  kable_styling(font_size = 7)
+knitr::kable(R_quan2, caption="Correlation Matrix: qualitative and quantitative variable", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+The correlation matrix for label "low-class" suggest that in those observations exists a strong positive linear relationship between the variables *CRIM* and *TAX*. By contrast, in the correlation matrix for label "low-class" we find that the strongest relationship is in this case between *NOX* and *TAX*.
+
+However, the most interesting thing is the values of the correlation matrix composed by the five attributes (we have added up the qualitative variable). The last column of this matrix states the evidence we have mentioned previously. We can see that the correlation coefficient is negative for the pair *MEDV*-*LSTAT* as the mean of the median value of prices decreases when the percentage of *low-class* increases. For the pair *CRIME*-*LSTAT* occurs the inverse, when *low-status* increases, values of variable *CRIME* increase as they have a positive linear relationship.
+
+## Outliers
+
+The next step is about analyzing the outliers present in the dataset. Then, we are going to use the _Mahalanobis_ distance which plays an important role in outlier detection using the _Minimum Covariance Determinant_ (MCD) (based on the distance commented).
+
+This functionality is provided by the function _CovMcd_ inside the package _rrcov_. As it is said in the [documentation](https://www.rdocumentation.org/packages/robustbase/versions/0.93-9/topics/covMcd) of the function, the input data must be a numeric matrix, therefore it is only possible to apply it on quantitative variables, and must not have missing values. 
+
+We are going to apply this method using the matrix calculated in the previous step for each value of the categorical variable LSTAT.CAT: low class and medium-high class:
+
+For the _low class_ category data, we have run the code using the MCD but we have faced the following error: 
+
+$$
+\texttt{Error in r6pack(z, h = h, full.h = full.h, scaled = TRUE, scalefn = scalefn):} 
+$$
+$$
+\texttt{More than half of the observations lie on a hyperplane.}
+$$
+
+Originally, we though it was due to the possibility that the covariance matrix was singular but we calculated it in R and it worked smoothly. Then, we searched this error on internet and it showed that it is related to an issue when the _r6pack_ (robust scaler) is executed. Therefore, data are not eligible on this case for the _Minimum Covariance Determinant_ method.
+
+Let's execute the method to determine outliers for the _medium-high class_:
+
+```{r}
+mcd.estimators.mhc <- CovMcd(X_LSTAT_mhc, alpha=0.85, nsamp="deterministic")
+mean.mcd.estimators.mhc <- mcd.estimators.mhc$center
+covariance.mcd.estimators.mhc <- mcd.estimators.mhc$cov
+correlation.mcd.estimators.mhc <- cov2cor(covariance.mcd.estimators.mhc)
+```
+
+The main characteristics of the dataset without outliers, generated by the _MCD_ procedure, are summarized in the following tables for the quantitative variables:
+
+```{r}
+mean.mcd.est.quan.mhc <- rbind(mean.mcd.estimators.mhc[
+  colnames(X_LSTAT_mhc)])
+covariance.mcd.est.quan.mhc <- covariance.mcd.estimators.mhc[
+  colnames(X_LSTAT_mhc),colnames(X_LSTAT_mhc)]
+correlation.mcd.est.quan.mhc <- correlation.mcd.estimators.mhc[
+  colnames(X_LSTAT_mhc),colnames(X_LSTAT_mhc)]
+knitr::kable(mean.mcd.est.quan.mhc, 
+             caption="Mean vector without outliers (MHC)", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+Comparing these values with those ones obtained above we can conclude that the outliers influence directly the mean. In this case, the mean values of _TAX_ and _CRIM_ decreases from 398.35 to 353.39 and 2.95 to 1.0184, respectively. Therefore, this shows that the mean is not a robustic statistic.
+
+```{r}
+knitr::kable(covariance.mcd.est.quan.mhc, 
+             caption="Covariance matrix without outliers (MHC)", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+We can assume correctly that for the variance the values would be decreased as well, due to the fact that the sample covariance is calculated using the sample mean. Taking a look to the table of the covariance matrix, we have noticed that the values are decreased. For example, the value of the $Cov(CRIM)$ has decreased from 61.81 to 5.75, which is a change considerably significant.
+
+```{r}
+knitr::kable(correlation.mcd.est.quan.mhc, 
+             caption="Correlation matrix without outliers (MHC)", digits = 2) %>%
+  kable_styling(font_size = 7)
+```
+
+In the correlation matrix plotted above we can see those values without outliers. Comparing with the regular version of the correlation matrix, we have concluded that the correlation has changed significantly in the case of the $\rho(TAX,CRIM)$ -from 0.55 to 0.84- and the $\rho(CRIM, NOX)$ from 0.40 to 0.72. Hence, getting rid of the outliers produces the revelation of the significant relations between variable.
+
+After comparing these characteristics, we say that the outliers could misrepresent the data in a bad way.
+
+The _Mahalanobis_ distance calculated using the MCD procedure for the medium-high class data is:
+
+```{r}
+colors = brewer.pal(n=3, name="Dark2")
+n <- nrow(X_LSTAT_mhc)
+p <- ncol(X_LSTAT_mhc)
+
+# Mahalanobis distance for each point
+x.sq.mah.mcd.mhc <- mcd.estimators.mhc$mah
+var.outliers.mah.mcd.mhc <- rep(colors[1], n)
+
+# Indexes which contains an observation considered as outlier
+outliers.mah.mcd.mhc <- which(x.sq.mah.mcd.mhc > qchisq(.99, p))
+var.outliers.mah.mcd.mhc[outliers.mah.mcd.mhc] <- colors[2]
+
+print(sprintf("The method MCD has identified %s outliers", length(outliers.mah.mcd.mhc)))
+```
+
+The next two plots identify the outliers of the dataset using the method commented above. Both charts represent the same data but in the chart on the right the data is transformed using logarithms in order to visualize it properly.
+
+```{r fig.width=12}
+par(mfrow=c(1,2))
+
+plot(1:n, x.sq.mah.mcd.mhc, pch=19, col=var.outliers.mah.mcd.mhc,
+     main="Squared Mahalanobis distances",
+     xlab="Observation",
+     ylab="Squared Mahalanobis distance")
+abline(h=qchisq(.99,p),lwd=3,col=colors[1])
+
+plot(1:n, log(x.sq.mah.mcd.mhc), pch=19, col=var.outliers.mah.mcd.mhc, 
+     main="Log of squared Mahalanobis distances",
+     xlab="Observation",
+     ylab="Log of squared Mahalanobis distance")
+abline(h=log(qchisq(.99,p)),lwd=3,col=colors[1])
+```
+As it is visualized in the plots above, there are many observations identified as outliers after running this procedure. We can figure out how these outliers are distributed in our dataset using two graphs, one of them we have already used it previously: the Andrews' curves.
+
+```{r fig.width=14}
+parcoord(X_LSTAT_mhc, col=var.outliers.mah.mcd.mhc, 
+         var.label=TRUE, 
+         main="PCP for Boston Housing")
+```
+
+We have noticed that the lines asociated to outliers (visualized with the color red-orange) are more isolated, being located at the edge of the plot. You can see this perfectly taking a look at these values for the variables _CRIM_, _INDUS_, _RM_, _DIS_ and _B_.
+
+```{r fig.width=14}
+var.outliers.colors.mhc <- rep(colors[1],n)
+var.outliers.colors.mhc[outliers.mah.mcd.mhc] <- colors[2]
+andrews.matrix <- as.data.frame(cbind(X_LSTAT_mhc, 
+                                      as.factor(var.outliers.colors.mhc)))
+andrews(andrews.matrix, clr=13, ymax=6, 
+        main="Andrews' Plot for Boston Housing")
+```
+
+The graph we have plotted above provides an easy way to visualize the data in high-dimension, by mapping each observation onto a function. It is possible to see that the outliers, represented as a sky-blue line, are located at the edge of the curve. This means that these observations move away from the predicted path of other observations.
+
+
+## 2nd Step
+
+### PCA
+
+In this step we are going to apply PCA over our dataset. PCA can only be used when the data matrix contains quantitative variables. Therefore, we need to remove both binary and qualitative variables from our Data Set. 
+
+From the first step of the project we conclude that we were only going to consider as categorical the LSTAT feature. So, along with the variable CHAS which was a binary variable from the beginning, we are going to remove both of them to apply PCA.
+
+Also, as we have observations with different measures, it will be useful for other applications to have our data scaled. 
+
+```{r}
+clean_data$LSTAT= clean_data$LSTAT %>% 
+  factor(levels = c("Low-class","Medium-High-class"),labels = c(1,0))
+
+data_scale=clean_data
+data_scale$CHAS=NULL
+data_scale$LSTAT=NULL
+data_scale=as.data.frame(scale(data_scale))
+X=data_scale
+
+#Proof that data is scaled
+colMeans(X)
+```
+
+Once we have our data matrix ready, we check its dimensions.
+
+```{r}
+n <- nrow(X)
+n
+p <- ncol(X)
+p
+```
+
+In order to see how our variables are distributed, we are going to plot all the variables together.
+
+```{r}
+par(mfrow=c(3,4))
+sapply(names(X),function(cname){hist(X[[cname]],main=cname,col="lightblue")})
+```
+As it can be seen, there are some of our variables that are very skewed, both positive and negative. Therefore, we are going to apply logarithm to them so we reduce the influence of extreme values or outliers.
+
+```{r}
+X_trans <- X
+X_trans[,1] <- log(X[,1]+10)
+colnames(X_trans)[1] <- "log_CRIM"
+X_trans[,2] <- log(X[,2]+10)
+colnames(X_trans)[2] <- "log_ZN"
+X_trans[,7] <- log(X[,7]+10)
+colnames(X_trans)[7] <- "log_DIS"
+X_trans[,8] <- log(X[,8]+10)
+colnames(X_trans)[8] <- "log_RAD"
+X_trans[,11] <- log(X[,11]+10)
+colnames(X_trans)[11] <- "log_B"
+
+par(mfrow=c(3,4))
+sapply(names(X_trans),function(cname){hist(X_trans[[cname]],main=cname,col="lightgreen")})
+```
+Once we have our matrix ready we can apply PCA over it. The function used in R has an option that when TRUE, the data is automatically scaled. However, as we already scaled our data, we do not have to indicate it.
+
+```{r}
+X_pcs <- prcomp(X_trans)
+dim(X_pcs$x)
+```
+
+Now, our variable X_pcs is a matrix with principal component analysis applied.
+
+```{r}
+library(factoextra)
+fviz_eig(X_pcs,ncp=17,addlabels=T,barfill="lightyellow",barcolor="orange")
+a=get_eigenvalue(X_pcs)
+a
+```
+
+Using this plot we can see which percentage of variance is explained by each principal component. In this case we can see that the first one already explains almost a 55% of the variance. However, this does not mean that each column is less useful than the other one. It could happen that even though one of the principal components explains less variance, it differentiates groups better.
+
+Analyzing the cumulative variance percent, we can see that using the first four principal components we can explain a 89% of the variance. Therefore, we are going to continue our analysis using this first four components.
+
+```{r}
+dim(X_pcs$rotation)
+X_pcs$rotation[,1:4]
+```
+
+Now using the rotation attributes we can see how much each variable contribute to each principal component. The importance of each variable for each principal component is point is easier to do whith a plot:
+
+```{r}
+plot(1:p,X_pcs$rotation[,1],pch=19,col="lightgreen", 
+     main="Weights for the first PC", xlab="Variables",ylab="Score", 
+     ylim=c(-0.4,0.5))
+abline(h=0)
+text(1:p,X_pcs$rotation[,1],labels=colnames(X),pos=1,col="orange",cex=0.75)
+```
+
+For the first principal component we can see that the most used features are INDUS, NOX, AGE, TAX, MEDV and RM.
+
+I can also be very useful to see which variables are important for two components:
+
+```{r}
+plot(x=X_pcs$rotation[,2],y=X_pcs$rotation[,3],pch=19,col="green", 
+     main="Weights for the first four PCs")
+abline(h=0,v=0)
+text(x=X_pcs$rotation[,2],y=X_pcs$rotation[,3],labels=colnames(X), 
+     pos=1,col="blue",cex=0.75)
+library(plotrix)
+draw.circle(0,0,0.3,border="orange",lwd=3)
+```
+
+```{r}
+plot(1:p,X_pcs$rotation[,3],pch=19,col="lightgreen",
+     main="Weights for the third PC",xlab="Variables",ylab="Score")
+abline(h=0)
+text(1:p,X_pcs$rotation[,3],labels=colnames(X),pos=1,col="orange",cex=0.75)
+```
+
+It is very interesting that plotting the weight for the third principal component, the variable *PTRATIO* has a weight of 0.759, which means that it is a very important variable for this component and if this component is key for group differentiation.
+
+Now in order to see if we can easily find groups between the principal components, we can compute its scatter plot.
+
+```{r}
+pairs(X_pcs$x[,1:4],pch=19,main="The first four PCs",col="orange")
+```
+
+As it can be seen, it looks like that using PC1 and PC2 there could be two groups "well differentiated". Same thing happens using PC1 and PC3, whereas using PC2 and PC3 we could find up to 4 or 5 groups.
+
+Now, using the first and third principal components we are going to analyze if the differentiation is given by the CHAS variable or by the LSTAT variable that we created.
+
+## Partitional clustering methods
+
+The idea of partitional methods is to find the best of multiple partitions which provide us with the best of all the possible solutions. It can be achieved minimizing the $WSS_k$, i.e. the within-cluster sums of squares where $k$ is the number of clusters. The main method for achieve this is through K-means algorithm.  
+
+Before we apply K-means algorithm, we must choose the suitable number of clusters. For this purpose, we will use different methods. First, we select this value $k$ with $WSS_k$: 
+
+```{r}
+library("factoextra")
+fviz_nbclust(X,kmeans,method="wss",k.max=10)
+```
+This method is useful when the curve has an important decrease first and then the value of $WSS_k$ stabilizes. Therefore, the plot does not allow us to identify clearly the optimal number for $k$ as we cannot see that significant decrease mentioned. However, the most important decline corresponds to $k=2$. Nevertheless we will apply the rest of methods to check this selection.
+
+Now, we try to find the optimal value of k using the average silhouette.
+
+```{r}
+fviz_nbclust(X,kmeans,method="silhouette",k.max=10)
+```
+
+The optimal value of k for this method is 2. Let's see the last of the methods.
+
+```{r}
+gap_stat <- clusGap(X,FUN=kmeans,K.max=10,B=100)
+fviz_gap_stat(gap_stat,linecolor="steelblue",
+              maxSE=list(method="firstmax",SE.factor = 1))
+```
+The suitable value of k for Gap statistic method is 5. However, this choice usually tends to select a large value for the number of clusters. Thus, we will apply the algorithm K-Means for value of k=2.
+
+After we apply the algorithm, we plot the different clusters using the PCA components obtained before. We have identified previously that PCA components 1 and 3 are able to distinguish different groups. 
+
+```{r}
+k_means <- kmeans(X,centers=2,iter.max=1000,nstart=100)
+colors_kmeans <- c("green","blue")[k_means$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_kmeans,
+     main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+Even though there are instances overlapping, both clusters are well differentiated. Let's see how well is the assignment done.
+
+```{r, fig.width=5, fig.height=5}
+sil_kmeans <- silhouette(k_means$cluster,dist(X,"euclidean"))
+plot(sil_kmeans,col="green")
+```
+
+The average silhouette is 0.37. It indicates the assignment is reasonable but not perfect as the value is true positive but not much large.
+
+Now, we apply K-Medoids algorithm. This algorithm replace the sample mean vector by the central observations of the cluster configured. Since the number of outliers in our dataset is large, it will affect to the configuration of the new clusters.
+
+### PAM
+
+```{r}
+pam_X <- pam(X,k=2,metric="manhattan",stand=FALSE)
+colors_pam <- c("green","blue")[pam_X$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_pam,main="First and second PCs",xlab="First PC",ylab="Third PC")
+```
+
+
+Let's analyze the assignment done.
+
+```{r, fig.height=5, fig.width=5}
+sil_pam_X <- silhouette(pam_X$cluster,dist(X,method="manhattan"))
+plot(sil_pam_X,col="blue")
+```
+
+As we have mentioned, the average silhouette increases with PAM algorithm. 
+
+We will also implement CLARA algorithm to see if we get better results even though this method is often used with large data sets.
+
+```{r}
+clara_X <- clara(X,k=2,metric="manhattan",stand=FALSE)
+colors_clara_X <- c("green","blue")[clara_X$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_clara_X,
+     main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+
+
+```{r, fig.height=5, fig.width=5}
+sil_clara_X <- silhouette(clara_X$cluster,dist(X,method="manhattan"))
+plot(sil_clara_X,col="green")
+```
+
+As we can see the average solhouette is the same.
+
+```{r, fig.height=10}
+colors_CHAS_X <- c("green","blue")[1*(clean_data$CHAS==1)+1]
+colors_LSTAT_X <- c("green","blue")[1*(clean_data$LSTAT==1)+1]
+par(mfrow=c(2,2))
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_CHAS_X,
+     main="By CHAS category",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_LSTAT_X,
+     main="By LSTAT category",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_pam,
+     main="PAM",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_kmeans,
+     main="K-Means",xlab="First PC",ylab="Third PC")
+```
+
+These plots indicate that there are no relationship between the groups formed by the qualitative variables and the groups formed with K-Medoids algorithm (the best method selected).
+
+### PAM with Grow distance
+
+
+
+```{r}
+X.qual <- clean_data
+X_Gower <- daisy(X.qual,metric="gower")
+
+X_Gower_mat <- as.matrix(X_Gower)
+X[which(X_Gower_mat==min(X_Gower_mat[X_Gower_mat!=min(X_Gower_mat)]),
+        arr.ind = TRUE)[1,],]
+X[which(X_Gower_mat==max(X_Gower_mat[X_Gower_mat!=max(X_Gower_mat)]),
+        arr.ind = TRUE)[1,],]
+
+X_K <- matrix(NA,nrow=1,ncol=19)
+for (i in 1:19){
+  pam_X_Gower_mat <- pam(X_Gower_mat,k=i+1,diss=TRUE)
+  X_K[i] <- pam_X_Gower_mat$silinfo$avg.width
+}
+
+plot(2:20,X_K,pch=19,col="deepskyblue2",xlab="Number of clusters",
+     ylab="Average silhouette")
+which.max(X_K)+1
+```
+
+Looks like the best solution is k=2.
+
+```{r,fig.height=5, fig.width=5}
+pam_X_Gower_mat <- pam(X_Gower_mat,k=2,diss=TRUE)
+X.qual[pam_X_Gower_mat$medoids,]
+sil_pam_X_Gower_mat <- silhouette(pam_X_Gower_mat$cluster,X_Gower_mat)
+plot(sil_pam_X_Gower_mat,col="green")
+summary(sil_pam_X_Gower_mat)
+```
+
+## Hierarchical clustering
+
+Then, once we have defined the number of cluster (k=2), we can apply clustering using another strategy called hierarchical, being two main ways of implementing it:
+
+```{r}
+optimal_k_clusters = 2
+```
+
+### Agglomerative hierarchical clustering
+
+This implementation goes from 1 observation equal to 1 kluster and then continues merging until k clusters:
+
+#### Single linkage
+
+```{r}
+man_dist_X <- daisy(X,metric="manhattan",stand=FALSE)
+
+single_X <- hclust(man_dist_X,method="single")
+
+plot(single_X,main="Single linkage",cex=0.8)
+rect.hclust(single_X, 
+            k=optimal_k_clusters, 
+            border=colors[1])
+
+cl_single_X <- cutree(single_X,optimal_k_clusters)
+table(cl_single_X)
+
+```
+
+As we can see in the tree and table above, it has been generated 2 clusters (as it was indicated earlier) that are not well-balanced.
+
+```{r}
+
+colors_single_X <- c(colors[1],colors[2])[cl_single_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
+
+```
+
+As we can see in the PCA's component 1st and 3rd, the aggregation dind't go that well, as there is some data overlapped.
+
+```{r}
+sil_single_X <- silhouette(cl_single_X, man_dist_X)
+plot(sil_single_X,col=colors[1])
+
+```
+
+According to the silhouette plot, there are a few observations that weren't well grouped as the value is negative. 
+
+#### Complete linkage
+
+```{r}
+
+complete_X <- hclust(man_dist_X,method="complete")
+
+plot(complete_X, main="Complete linkage",cex=0.8)
+rect.hclust(complete_X, k=optimal_k_clusters, border=colors[1])
+
+cl_complete_X <- cutree(complete_X, optimal_k_clusters)
+table(cl_complete_X)
+
+```
+
+As well, in this case data is not well balanced. 
+
+```{r}
+colors_complete_X <- c(colors[1],colors[2])[cl_complete_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_complete_X,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
+
+```
+
+We would say that this aggregation is slighly better than the previous one, although it is not so good.
+
+```{r}
+
+sil_complete_X <- silhouette(cl_complete_X, man_dist_X)
+plot(sil_complete_X,col=colors[1])
+
+```
+
+This graph is similar to the one plotted in the previous method.
+
+#### Average linkage
+
+```{r}
+
+average_X <- hclust(man_dist_X, method="average")
+
+plot(average_X, main="Average linkage", cex=0.8)
+rect.hclust(average_X, k=optimal_k_clusters, border=colors[1])
+
+cl_average_X <- cutree(average_X, optimal_k_clusters)
+table(cl_average_X)
+
+```
+
+Similar aggregation.
+
+```{r}
+
+colors_average_X <- c(colors[1],colors[2])[cl_average_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_average_X,
+     main="First two PCs for the Boston Housing data set",
+     xlab="First PC",ylab="Third PC")
+
+```
+
+Now we can see that this method splits then data in two groups without overlapping, thus it could be a good final choice however we are going to compute the remaining methods in order to know if this can be improved. 
+
+```{r}
+
+sil_average_X <- silhouette(cl_average_X,man_dist_X)
+plot(sil_average_X,col=colors[1])
+
+```
+
+Here, we can see a better result on the way of grouping observations due to the fact that there are no negative values or, if they are, the absolute value is low.
+
+#### Ward linkage
+
+```{r}
+ward_X <- hclust(man_dist_X,method="ward.D")
+
+plot(ward_X, main="Ward linkage", cex=0.8)
+rect.hclust(ward_X, k=optimal_k_clusters, border=colors[1])
+
+cl_ward_X <- cutree(ward_X, optimal_k_clusters)
+table(cl_ward_X)
+
+```
+
+Same as before.
+
+```{r}
+
+colors_ward_X <- c(colors[1],colors[2])[cl_ward_X]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+
+```
+
+The chart above represents some observations grouped with overlapping. Therefore, it doesn't look like a good way of clustering for our data.
+
+```{r}
+
+sil_ward_X <- silhouette(cl_ward_X,man_dist_X)
+plot(sil_ward_X,col=colors[1])
+
+```
+
+As we commented, this method doesn't do a proper job clustering observations.
+
+### Divisive Hierarchical Clustering
+
+This implementation goes from considering all the dataset as one group and then continues dividing it until obtaining k clusters:
+
+```{r}
+
+diana_X <- diana(X,metric="manhattan")
+
+pltree(diana_X, cex = 0.8, hang = -1, main = "Dendrogram of diana")
+
+rect.hclust(diana_X, k=optimal_k_clusters, border=colors[1])
+
+cl_diana_X <- cutree(diana_X, optimal_k_clusters)
+table(cl_diana_X)
+
+```
+
+Same as commented before, there are two non well-balanced groups.
+
+```{r}
+
+colors_diana_X <- c(colors[1],colors[2])[cl_diana_X]
+plot(X_pcs$x[,c(1,3)], pch=19, col=colors_diana_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+
+```
+
+It looks like this method groups the data in a similar way that the _Average Linkage_ did. Both of them could be valid for clustering. Let's take a look to the silhouette plot:
+
+```{r}
+
+sil_diana_X <- silhouette(cl_diana_X,man_dist_X)
+plot(sil_diana_X,col=colors[1])
+
+```
+
+As we can see in the plot above, there are no negative values associated. Therefore, we would say that this approach is the best one so far, as we still have to try how model-based clustering methods work on this dataset.
+
+### Overview
+
+Let's make a plot which compares visually each method. In this case, we are going to use the first and the third PCA's components. 
+
+```{r, fig.height=10}
+par(mfrow=c(3,2))
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X,
+      main="Single",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_complete_X,
+      main="Complete",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_average_X,
+      main="Average",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X,
+       main="Ward",xlab="First PC",ylab="Third PC")
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_diana_X,
+     main="DIANA",xlab="First PC",ylab="Third PC")
+```
+
+As we can see, the methods that carry out the task of clustering with the best result are _average_ and _DIANA_. Nevertheless, as we saw in the silhouette plot, in the case of _DIANA_ there is no negative values associated, hence this would be the best strategy to implement in our data. 
+
+### Hierarchical clustering with mixed variables
+
+Let's apply the hierarchical clustering with mixed variables, which means that categorical variables are also valid using the Gower distance.
+
+#### Agglomerative hierarchical clustering
+
+Let's do the same we have done above using the distance Gower with agglomerative hierarchical clustering and compare results:
+
+```{r, fig.height=8}
+X_Gower_mat <- daisy(X_quan, metric = "gower")
+
+methods <- c("single", "complete", "average", "ward.D")
+
+for(method_hclust in methods) {
+  
+  h_method_X <- hclust(X_Gower_mat, method=method_hclust)
+  cl_method_X <- cutree(h_method_X, optimal_k_clusters)
+  colors_method_X <- c(colors[1],colors[2])[cl_method_X]
+  sil_method_X <- silhouette(cl_method_X, X_Gower_mat)
+  
+  par(mfrow=c(2,2))
+  plot(h_method_X, main="Gower hclust", cex=0.8)
+  rect.hclust(h_method_X, k=optimal_k_clusters, border=colors[1])
+  plot(X_pcs$x[,c(1,3)], pch=19, col=colors_method_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+  plot(sil_method_X,col=colors[1], main="")
+  mtext(method_hclust, side = 3, line = -1, outer = TRUE)
+  
+}
+
+```
+
+#### Divisive Hierarchical Clustering
+
+Let's do the same with divisive hierarchical clustering and compare results:
+
+```{r, fig.height=8}
+
+diana_X <- diana(X_quan, metric="gower")
+
+par(mfrow=c(2,2))
+
+pltree(diana_X, cex = 0.8, hang = -1, main = "Dendrogram of diana")
+rect.hclust(diana_X, k=optimal_k_clusters, border=colors[1])
+
+cl_diana_X <- cutree(diana_X, optimal_k_clusters)
+
+colors_diana_X <- c(colors[1],colors[2])[cl_diana_X]
+plot(X_pcs$x[,c(1,3)], pch=19, col=colors_diana_X,
+     main="PCs for the Bostong Housing data set",
+     xlab="First PC",ylab="Third PC")
+
+sil_diana_X <- silhouette(cl_diana_X,man_dist_X)
+plot(sil_diana_X,col=colors[1])
+
+
+```
+
+
+As we have seen, including categorical variables doesn't produce an improvement in the task of grouping our data. 
