@@ -1093,7 +1093,8 @@ res.bic.sum <- as.matrix(summary(BIC_mclust_42))
 k.shape <- unlist(sapply(unlist(rownames(res.bic.sum)), FUN=strsplit, ","))
 k.shape <- matrix(k.shape, byrow=TRUE, nrow=3)
 meaning.shape <- sapply(k.shape[,1], mclustModelNames)
-best.kluster.cov <- cbind(meaning.shape[1,],meaning.shape[2,], k.shape[,2], res.bic.sum[,1])
+best.kluster.cov <- cbind(meaning.shape[1,],meaning.shape[2,], 
+                          k.shape[,2], res.bic.sum[,1])
 rownames(best.kluster.cov) <- c("1st", "2nd", "3rd")
 colnames(best.kluster.cov) <- c("ID.SHAPE", "SHAPE", "K", "BIC")
 knitr::kable(best.kluster.cov, digits = 2) %>% 
@@ -1111,7 +1112,8 @@ res.bic.sum <- as.matrix(summary(BIC_mclust_9))
 k.shape <- unlist(sapply(unlist(rownames(res.bic.sum)), FUN=strsplit, ","))
 k.shape <- matrix(k.shape, byrow=TRUE, nrow=3)
 meaning.shape <- sapply(k.shape[,1], mclustModelNames)
-best.kluster.cov <- cbind(meaning.shape[1,],meaning.shape[2,], k.shape[,2], res.bic.sum[,1])
+best.kluster.cov <- cbind(meaning.shape[1,],meaning.shape[2,], 
+                          k.shape[,2], res.bic.sum[,1])
 rownames(best.kluster.cov) <- c("1st", "2nd", "3rd")
 colnames(best.kluster.cov) <- c("ID.SHAPE", "SHAPE", "K", "BIC")
 knitr::kable(best.kluster.cov, digits = 2) %>% 
@@ -1121,7 +1123,7 @@ knitr::kable(best.kluster.cov, digits = 2) %>%
 
 Next step is to run the _M-Clust_ method with the optimal solution, we are going to use the three first principal components calculated in previous points:
 
-```{r, fig.width=10}
+```{r, fig.height=6}
 mclus.x.pca <- Mclust(X_pcs$x[,1:3], x=BIC_mclust_9)
 
 plot(mclus.x.pca, what="classification")
@@ -1140,21 +1142,30 @@ plot(mclus.x.pca.12, what="density")
  
  Once we have described each cluster, it is time to see the probabilities of each observation to belong to each cluster:
  
-```{r, fig.width=10}
+```{r, fig.width=10, fig.height=10}
 colors_mclust_x <- c(colors[1],colors[2],colors[3],colors[4],colors[5],colors[6]
                      ,colors[7],colors[8],colors[9])[mclus.x.pca$classification]
 
 par(mfrow=c(3,3))
 
-plot(1:n,mclus.x.pca.12$z[,1],pch=19,col=colors_mclust_x,main="Cluster 1",xlab="Boston Area",ylab="Probability of cluster 1")
-plot(1:n,mclus.x.pca.12$z[,2],pch=19,col=colors_mclust_x,main="Cluster 2",xlab="Boston Area",ylab="Probability of cluster 2")
-plot(1:n,mclus.x.pca.12$z[,3],pch=19,col=colors_mclust_x,main="Cluster 3",xlab="Boston Area",ylab="Probability of cluster 3")
-plot(1:n,mclus.x.pca.12$z[,4],pch=19,col=colors_mclust_x,main="Cluster 4",xlab="Boston Area",ylab="Probability of cluster 4")
-plot(1:n,mclus.x.pca.12$z[,1],pch=19,col=colors_mclust_x,main="Cluster 5",xlab="Boston Area",ylab="Probability of cluster 5")
-plot(1:n,mclus.x.pca.12$z[,2],pch=19,col=colors_mclust_x,main="Cluster 6",xlab="Boston Area",ylab="Probability of cluster 6")
-plot(1:n,mclus.x.pca.12$z[,3],pch=19,col=colors_mclust_x,main="Cluster 7",xlab="Boston Area",ylab="Probability of cluster 7")
-plot(1:n,mclus.x.pca.12$z[,4],pch=19,col=colors_mclust_x,main="Cluster 8",xlab="Boston Area",ylab="Probability of cluster 8")
-plot(1:n,mclus.x.pca.12$z[,4],pch=19,col=colors_mclust_x,main="Cluster 9",xlab="Boston Area",ylab="Probability of cluster 9")
+plot(1:n,mclus.x.pca.12$z[,1], pch=19,col=colors_mclust_x,main="Cluster 1",
+     xlab="Boston Area",ylab="Probability of cluster 1")
+plot(1:n,mclus.x.pca.12$z[,2], pch=19,col=colors_mclust_x,main="Cluster 2",
+     xlab="Boston Area",ylab="Probability of cluster 2")
+plot(1:n,mclus.x.pca.12$z[,3], pch=19,col=colors_mclust_x,main="Cluster 3",
+     xlab="Boston Area",ylab="Probability of cluster 3")
+plot(1:n,mclus.x.pca.12$z[,4], pch=19,col=colors_mclust_x,main="Cluster 4",
+     xlab="Boston Area",ylab="Probability of cluster 4")
+plot(1:n,mclus.x.pca.12$z[,1], pch=19,col=colors_mclust_x,main="Cluster 5",
+     xlab="Boston Area",ylab="Probability of cluster 5")
+plot(1:n,mclus.x.pca.12$z[,2], pch=19,col=colors_mclust_x,main="Cluster 6",
+     xlab="Boston Area",ylab="Probability of cluster 6")
+plot(1:n,mclus.x.pca.12$z[,3], pch=19,col=colors_mclust_x,main="Cluster 7",
+     xlab="Boston Area",ylab="Probability of cluster 7")
+plot(1:n,mclus.x.pca.12$z[,4], pch=19,col=colors_mclust_x,main="Cluster 8",
+     xlab="Boston Area",ylab="Probability of cluster 8")
+plot(1:n,mclus.x.pca.12$z[,4] ,pch=19,col=colors_mclust_x,main="Cluster 9",
+     xlab="Boston Area",ylab="Probability of cluster 9")
 ```
 As we can see in the previous charts, there is a lot of uncertainty, it is not clear exactly what is the cluster associated with a group. For example, the observations identified with the purple color, have hihgh probability of belonging to the cluster 4, 8 and 9. Let's take a look to the chart which shows uncertainty especifically:
 
@@ -1163,7 +1174,7 @@ par(mfrow=c(1,1))
 plot(mclus.x.pca.12, what="uncertainty")
 ```
 
-As we can see in the previous plot, most of the observations has not highly probability of belonging to the cluster they were associated. This could be a consequence of not choosen the optimal cluster number suggested by the method Bayesian Information Criterion. 
+As we can see in the previous plot, most of the observations has not highly probability of belonging to the cluster they were associated. This could be a consequence of not chosen the optimal cluster number suggested by the method Bayesian Information Criterion, notice that there are so many observations which are not associated to any cluster (righ-hand side of the graphs).
 
 ## Factor Analysis 
 
@@ -1183,14 +1194,16 @@ get_eigenvalue(X_pcs)
 Once matrix M has been computed, we analyze the importance of variables for each factor vector obtained. We can do it interpreting the following plots:
 
 ```{r}
-plot(1:p,pcfa_matrix[,1],pch=19,col=colors[1],xlab="",ylab="Weights",main="Weights for the first factor")
+plot(1:p,pcfa_matrix[,1],pch=19,col=colors[1],xlab="",ylab="Weights",
+     main="Weights for the first factor")
 abline(h=0)
 text(1:p,pcfa_matrix[,1],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 ```
 The variables *INDUS*, *NOX*, *AGE*, *ZN* and *DIS* represents the most important feature to define the first latent variable.
 
 ```{r}
-plot(1:p,pcfa_matrix[,2],pch=19,col=colors[1],xlab="",ylab="Weights",main="Weights for the first factor")
+plot(1:p,pcfa_matrix[,2],pch=19,col=colors[1],xlab="",ylab="Weights",
+     main="Weights for the first factor")
 abline(h=0)
 text(1:p,pcfa_matrix[,2],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 ```
@@ -1203,17 +1216,21 @@ Now, we will show what are the variables which are able to explain better the fa
 
 comm_pcfa <- diag(pcfa_matrix %*% t(pcfa_matrix))
 comm_pcfa
-plot(1:p,sort(comm_pcfa,decreasing=TRUE),pch=20,col=colors[1],xlim=c(0,34),xlab="Variables",ylab="Communalities",
+plot(1:p,sort(comm_pcfa,decreasing=TRUE),pch=20,col=colors[1],xlim=c(0,34),
+     xlab="Variables",ylab="Communalities",
      main="Communalities with PCFA")
-text(1:p,sort(comm_pcfa,decreasing=TRUE),labels=names(sort(comm_pcfa,decreasing=TRUE)),pos=4,col=colors[5],cex=0.75)
+text(1:p,sort(comm_pcfa,decreasing=TRUE),
+     labels=names(sort(comm_pcfa,decreasing=TRUE)),pos=4,col=colors[5],cex=0.75)
 
 uniq_pcfa <- 1 - comm_pcfa
 uniq_pcfa
 names(uniq_pcfa) <- names(comm_pcfa)
 uniq_pcfa
-plot(1:p,sort(uniq_pcfa,decreasing=TRUE),pch=20,col=colors[1],xlim=c(0,34),xlab="Variables",ylab="Uniquenesses",
+plot(1:p,sort(uniq_pcfa,decreasing=TRUE),pch=20,col=colors[1],xlim=c(0,34),
+     xlab="Variables",ylab="Uniquenesses",
      main="Uniquenesses with PCFA")
-text(1:p,sort(uniq_pcfa,decreasing=TRUE),labels=names(sort(uniq_pcfa,decreasing=TRUE)),pos=4,col=colors[5],cex=0.75)
+text(1:p,sort(uniq_pcfa,decreasing=TRUE),
+     labels=names(sort(uniq_pcfa,decreasing=TRUE)),pos=4,col=colors[5],cex=0.75)
 ```
 The previous plots suggest us that the variables better explained by the factors are *PTRTIO* and *RAD* while, in contrast, the variables worse explained by the factors are *B* and *CRIME*. This information is provided by the highest and lowest values of communalities and uniquenesses.
 
@@ -1258,11 +1275,13 @@ M_pfa
 
 ```{r}
 par(mfrow=c(1,2))
-plot(1:p,M_pfa[,1],pch=19,col=colors[1],xlab="",ylab="Weights",main=" PFA Weights for the first factor")
+plot(1:p,M_pfa[,1],pch=19,col=colors[1],xlab="",ylab="Weights",
+     main=" PFA Weights for the first factor")
 abline(h=0)
 text(1:p,M_pfa[,1],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 
-plot(1:p,pcfa_matrix[,1],pch=19,col=colors[1],xlab="",ylab="Weights",main="PFCA Weights for the first factor")
+plot(1:p,pcfa_matrix[,1],pch=19,col=colors[1],xlab="",
+     ylab="Weights",main="PFCA Weights for the first factor")
 abline(h=0)
 text(1:p,pcfa_matrix[,1],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 
@@ -1272,11 +1291,13 @@ As expected, the results of the weights for the 1st component of the PFA are alm
 
 ```{r}
 par(mfrow=c(1,3))
-plot(1:p,M_pfa[,3],pch=19,col=colors[1],xlab="",ylab="Weights",main=" PFA Weights for the first factor")
+plot(1:p,M_pfa[,3],pch=19,col=colors[1],xlab="",ylab="Weights",
+     main=" PFA Weights for the first factor")
 abline(h=0)
 text(1:p,M_pfa[,3],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 
-plot(1:p,pcfa_matrix[,3],pch=19,col=colors[1],xlab="",ylab="Weights",main="PFCA Weights for the first factor")
+plot(1:p,pcfa_matrix[,3],pch=19,col=colors[1],xlab="",
+     ylab="Weights",main="PFCA Weights for the first factor")
 abline(h=0)
 text(1:p,pcfa_matrix[,3],labels=colnames(X),pos=1,col=colors[5],cex=0.75)
 
@@ -1295,10 +1316,14 @@ Nevertheless, we can see that for the third component there are slight changes b
 
 ```{r}
 par(mfrow=c(2,3))
-plot(pcfa_matrix[,1],M_pfa[,1],pch=19,col=color_1,main="First factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
-plot(pcfa_matrix[,2],M_pfa[,2],pch=19,col=color_1,main="Second factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
-plot(pcfa_matrix[,3],M_pfa[,3],pch=19,col=color_1,main="Third factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
-plot(pcfa_matrix[,4],M_pfa[,4],pch=19,col=color_1,main="Fourth factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
+plot(pcfa_matrix[,1],M_pfa[,1],pch=19,col=colors[1],
+     main="First factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
+plot(pcfa_matrix[,2],M_pfa[,2],pch=19,col=colors[1],
+     main="Second factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
+plot(pcfa_matrix[,3],M_pfa[,3],pch=19,col=colors[1],
+     main="Third factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
+plot(pcfa_matrix[,4],M_pfa[,4],pch=19,col=colors[1],
+     main="Fourth factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
 ```
 
 Again we can see each component is very similar for the PCA and PCFA.
@@ -1314,7 +1339,8 @@ Sigma_nu_pfa
 
 ```{r}
 par(mfrow=c(1,1))
-plot(diag(Sigma_nu_pcfa),diag(Sigma_nu_pfa),pch=19,col=color_1,main="Noise variances with PCFA and PFA",
+plot(diag(Sigma_nu_pcfa),diag(Sigma_nu_pfa),pch=19,col=colors[1],
+     main="Noise variances with PCFA and PFA",
      xlab="PCFA",ylab="PFA")
 ```
 
@@ -1355,7 +1381,7 @@ F_pfa
 # See that the factors are uncorrelated
 
 ```{r}
-pairs(F_pfa,pch=19,col=color_1)
+pairs(F_pfa,pch=19,col=colors[1])
 corrplot(cor(F_pfa),order="hclust")
 ```
 In the scatter plot we can see that now we are obtaining a perfect separation of at least two groups when the third component is added, whereas when we applied PCA the differenciation was't that clear. Also we can see that the factors are not correlated at all.
