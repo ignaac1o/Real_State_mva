@@ -709,7 +709,16 @@ colors_kmeans <- c("green","blue")[k_means$cluster]
 plot(X_pcs$x[,c(1,3)],pch=19,col=colors_kmeans,
      main="First and third PCs",xlab="First PC",ylab="Third PC")
 ```
-Even though there are instances overlapping, both clusters are well differentiated. Let's see how well is the assignment done.
+Even though there is one instance overlapping, both clusters are well differentiated. Nevertheless, we are going to try with 3 clusters to see if the aggregation is improved: 
+
+```{r}
+k_means_3 <- kmeans(X,centers=3,iter.max=1000,nstart=100)
+colors_kmeans_3 <- brewer.pal(n=3, name="RdYlGn")[k_means_3$cluster]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_kmeans_3,
+     main="First and third PCs",xlab="First PC",ylab="Third PC")
+```
+
+As we can see above, result wasn't improved increment the number of clusters, there is a lot of overlapping. Let's see how well is the assignment done.
 
 ```{r, fig.width=5, fig.height=5}
 sil_kmeans <- silhouette(k_means$cluster,dist(X,"euclidean"))
@@ -728,8 +737,7 @@ colors_pam <- c("green","blue")[pam_X$cluster]
 plot(X_pcs$x[,c(1,3)],pch=19,col=colors_pam,main="First and second PCs",xlab="First PC",ylab="Third PC")
 ```
 
-
-Let's analyze the assignment done.
+This result is better than the previous one, so we wouls say that for this procedure k=2 is the optimal parameter. Let's analyze how the assignment was done:
 
 ```{r, fig.height=5, fig.width=5}
 sil_pam_X <- silhouette(pam_X$cluster,dist(X,method="manhattan"))
@@ -747,6 +755,7 @@ plot(X_pcs$x[,c(1,3)],pch=19,col=colors_clara_X,
      main="First and third PCs",xlab="First PC",ylab="Third PC")
 ```
 
+The clustering looks good, there is only two points which have overlapping. We have tested with k=3 and the result wasn't improved, it was worse. 
 
 ```{r, fig.height=5, fig.width=5}
 sil_clara_X <- silhouette(clara_X$cluster,dist(X,method="manhattan"))
@@ -854,7 +863,20 @@ plot(sil_single_X,col=colors[1])
 
 ```
 
-According to the silhouette plot, there are a few observations that weren't well grouped as the value is negative. 
+According to the silhouette plot, there are a few observations that weren't well grouped as the value is negative. Nevertheless, we are going to execute the procedure with k=3 in order to see if the result is improved:
+
+```{r}
+man_dist_X_3 <- daisy(X,metric="manhattan", stand=FALSE)
+single_X_3 <- hclust(man_dist_X_3, method="single")
+
+cl_single_X_3 <- cutree(single_X_3, 3)
+colors_single_X_3 <- brewer.pal(n=3, name="RdYlGn")[cl_single_X_3]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_single_X_3,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
+```
+
+Again, as we can see in the plot above, it is not a better result.
 
 #### Complete linkage
 
@@ -925,7 +947,19 @@ plot(sil_average_X,col=colors[1])
 
 ```
 
-Here, we can see a better result on the way of grouping observations due to the fact that there are no negative values or, if they are, the absolute value is low.
+Here, we can see a better result on the way of grouping observations due to the fact that there are no negative values or, if they are, the absolute value is low. We want to test the procedure with a value of 3 to see if there are even more improvements:
+
+```{r}
+man_avg_X_3 <- daisy(X,metric="manhattan", stand=FALSE)
+average_X_3 <- hclust(man_avg_X_3, method="average")
+
+cl_avg_X_3 <- cutree(average_X_3, 3)
+colors_avg_X_3 <- brewer.pal(n=3, name="RdYlGn")[cl_avg_X_3]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_avg_X_3,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
+```
+The group formed by this method is well-identified, the only difference compared with the same procedure with k=2 is that in this case there is a new group in the top center part of the chart, formed by two observations.
 
 #### Ward linkage
 
@@ -960,7 +994,20 @@ plot(sil_ward_X,col=colors[1])
 
 ```
 
-As we commented, this method doesn't do a proper job clustering observations.
+As we commented, this method doesn't do a proper job clustering observations with k=2, let's execute for 3 clusters:
+
+```{r}
+man_ward_X_3 <- daisy(X,metric="manhattan", stand=FALSE)
+ward_X_3 <- hclust(man_ward_X_3, method="ward.D")
+
+cl_ward_X_3 <- cutree(ward_X_3, 3)
+colors_ward_X_3 <- brewer.pal(n=3, name="RdYlGn")[cl_ward_X_3]
+plot(X_pcs$x[,c(1,3)],pch=19,col=colors_ward_X_3,
+     main="First two PCs for the Boston Housing",
+     xlab="First PC",ylab="Third PC")
+```
+
+As we can see above, choosing 3 clusters only makes the things worse.
 
 ### Divisive Hierarchical Clustering
 
