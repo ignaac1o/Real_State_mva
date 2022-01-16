@@ -1,5 +1,5 @@
 ---
-title: "Assignment - Midterm - Boston Housing"
+title: "Assignment - Boston Housing"
 subtitle: "Multivariate Analysis"
 author: "Ignacio Almodóvar, Luis Rodríguez, Javier Muñoz"
 date: "12/12/2021"
@@ -1211,7 +1211,7 @@ As we can see above the above, the two components which more distinguish the klu
 
 
 ```{r}
-mclus.x.pca.12 <- Mclust(X_pcs$x[,c(1,2)], x=BIC_mclust_9)
+mclus.x.pca.12 <- Mclust(X_pcs$x[,1:6], x=BIC_mclust_9)
 
 plot(mclus.x.pca.12, what="density")
 ```
