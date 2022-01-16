@@ -6,12 +6,18 @@ date: "12/12/2021"
 header-includes:
   - \usepackage{amsmath}
   - \usepackage{mathtools}
-output: pdf_document
+output:
+  pdf_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,  fig.align = 'center')
 ```
+
+\newpage
+
+# Step 0
 
 First of all we are going to load all the libraries needed for the analysis and read the Boston house prices dataset file.
 
@@ -34,6 +40,8 @@ library(mclust)
 
 dataset <- read.csv("Dataset.csv")
 ```
+
+# 1st Step
 
 ## Variables explanation
 
@@ -547,9 +555,9 @@ andrews(andrews.matrix, clr=13, ymax=6,
 The graph we have plotted above provides an easy way to visualize the data in high-dimension, by mapping each observation onto a function. It is possible to see that the outliers, represented as a sky-blue line, are located at the edge of the curve. This means that these observations move away from the predicted path of other observations.
 
 
-## 2nd Step
+# 2nd Step
 
-### PCA
+## Principal Component Analysis
 
 In this step we are going to apply PCA over our dataset. PCA can only be used when the data matrix contains quantitative variables. Therefore, we need to remove both binary and qualitative variables from our Data Set. 
 
@@ -1128,7 +1136,9 @@ plot(sil_diana_X,col=colors[1])
 ```
 
 
-As we have seen, including categorical variables doesn't produce an improvement in the task of grouping our data. 
+As we have seen, including categorical variables doesn't produce an improvement in the task of grouping our data.
+
+# 3rd Step
 
 ## Model-based clustering
 
@@ -1148,10 +1158,31 @@ knitr::kable(best.kluster.cov, digits = 2) %>%
   column_spec(1, bold=TRUE) %>% 
   kable_styling(latex_options = "HOLD_position")
 
-plot(BIC_mclust_42, main="BIC: optimal k-cluster and shape")
+plot(BIC_mclust_42, main="BIC: optimal k-cluster and shape", 
+     legendArgs = list(x = "bottomright", bg="transparent", ncol = 4))
+
 ```
 
-As we can in the table above, the BIC method provides a negative score, the closer this value to zero, the better. In this case it says that the best number of clusters is 42 and that the covariance matrices associated are ellipsoidal and equal shape, therefore it is closer to the most unrestricted possible configuration/model. Nevertheless, 42 clusters is a huge number and with high probability we won't be able to see any group clear. Let's execute the same method being more restricted with the parameter _G_:
+As we can in the table above, the BIC method provides a negative score, the closer this value to zero, the better (we are going to choose the configuration which maximizes this score). In this case it says that the best number of clusters is 42 and that the covariance matrices associated are ellipsoidal and equal shape, therefore it is closer to the most unrestricted possible configuration/model. Let's take a look to the 42 groups formed by this aggregation (taking into account the combination of the two-dimension from the first 6 principal components):
+
+```{r, warning=FALSE}
+colors.pal.42 = c(brewer.pal(12, "Set3"), brewer.pal(9, "Set1"), 
+           brewer.pal(12, "Paired"), brewer.pal(9, "Pastel1"))
+mclus.x.pca.42 <- Mclust(X_pcs$x[,1:4], x=BIC_mclust_42)
+plot(mclus.x.pca.42, what="classification", colors=colors.pal.42, symbols=NULL)
+```
+
+Let's take a look to the uncertainty plot:
+
+```{r, warning=FALSE}
+
+plot(mclus.x.pca.42, what="uncertainty", colors=colors.pal.42)
+
+```
+
+Taking a look to the chart plotted above, we can say that the uncertainty (bigger circles) is located in areas where observations from different clusters are closer to each other. Therefore, observations far from this area are properly clustered. 
+
+As you can see in the two previous plots, 42 clusters is a huge number and with high probability we won't be able to see any group clear (at least in the are where data is concentrated). Let's execute the same method, being more restricted with the parameter _G_ (by default, this value takes from 1 to 9 clusters):
 
 ```{r, cache=TRUE}
 BIC_mclust_9 <- mclustBIC(X_quan)
@@ -1214,14 +1245,15 @@ plot(1:n,mclus.x.pca.12$z[,4], pch=19,col=colors_mclust_x,main="Cluster 8",
 plot(1:n,mclus.x.pca.12$z[,4] ,pch=19,col=colors_mclust_x,main="Cluster 9",
      xlab="Boston Area",ylab="Probability of cluster 9")
 ```
-As we can see in the previous charts, there is a lot of uncertainty, it is not clear exactly what is the cluster associated with a group. For example, the observations identified with the purple color, have hihgh probability of belonging to the cluster 4, 8 and 9. Let's take a look to the chart which shows uncertainty especifically:
+
+As we can see in the previous charts, there is a lot of uncertainty, it is not clear exactly what is the cluster associated with a group. For example, the observations identified with the purple color, have high probability of belonging to the cluster 4, 8 and 9. Let's take a look to the chart which shows uncertainty specifically:
 
 ```{r}
 par(mfrow=c(1,1))
 plot(mclus.x.pca.12, what="uncertainty")
 ```
 
-As we can see in the previous plot, most of the observations has not highly probability of belonging to the cluster they were associated. This could be a consequence of not chosen the optimal cluster number suggested by the method Bayesian Information Criterion, notice that there are so many observations which are not associated to any cluster (righ-hand side of the graphs).
+As we can see in the previous plot, most of the observations has not highly probability of belonging to the cluster they were associated. This could be a consequence of not chosen the optimal cluster number suggested by the method Bayesian Information Criterion, notice that there are so many observations which are not associated to any cluster (right-hand side of the graphs).
 
 ## Factor Analysis 
 
@@ -1292,8 +1324,7 @@ corrplot(cor(F_pcfa),order="hclust")
 ```
 It seems that there is no a clear correlation between any pair of factors. Maybe we could find a linear relationship among latent variables 1 and 3, but it is not enough for stating such important fact. In fact, the second plot indicates that coefficient correlations are very low between each pair of factors.
 
-
-# Principal factor analysis
+## Principal factor analysis
 
 Obtain the sample correlation matrix of X, that is the sample covariance matrix of Y
 
@@ -1301,7 +1332,7 @@ Obtain the sample correlation matrix of X, that is the sample covariance matrix 
 R_X <- cor(X)
 ```
 
-# Obtain R_X - Sigma_nu_pcfa, its eigenvectors and eigenvalues
+### Obtain R_X - Sigma_nu_pcfa, its eigenvectors and eigenvalues
 
 ```{r}
 MM <- R_X - Sigma_nu_pcfa
@@ -1311,7 +1342,7 @@ MM_vectors <- MM_eig$vectors
 ```
 
 
-# Estimate the matrix M and use the varimax rotation for interpretability
+### Estimate the matrix M and use the varimax rotation for interpretability
 
 ```{r}
 M_pfa <- MM_eig$vectors[,1:r] %*% diag(MM_eig$values[1:r])^(1/2)
@@ -1358,7 +1389,7 @@ text(1:p,X_pcs$rotation[,3],labels=colnames(X),pos=1,col="black",cex=0.75)
 Nevertheless, we can see that for the third component there are slight changes between PFA and PCFA. Also, they both have change a lot compared to the PCA that we did in the second step. Notice that even thought the variable PTRATIO was very important in it, for PFA and PCFA it is not important anymore for any of the components.
 
 
-# Compare PCFA and PFA estimates of M
+### Compare PCFA and PFA estimates of M
 
 
 ```{r}
@@ -1375,14 +1406,14 @@ plot(pcfa_matrix[,4],M_pfa[,4],pch=19,col=colors[1],
 
 Again we can see each component is very similar for the PCA and PCFA.
 
-# Estimate the covariance matrix of the errors
+### Estimate the covariance matrix of the errors
 ```{r}
 Sigma_nu_pfa <- diag(diag(R_X - M_pfa %*% t(M_pfa)))
 Sigma_nu_pfa
 ```
 
 
-# Compare with the estimate with the PCFA method
+### Compare with the estimate with the PCFA method
 
 ```{r}
 par(mfrow=c(1,1))
@@ -1393,7 +1424,7 @@ plot(diag(Sigma_nu_pcfa),diag(Sigma_nu_pfa),pch=19,col=colors[1],
 
 There are some small differences
 
-# Communalities and uniquenesses
+### Communalities and uniquenesses
 
 ```{r}
 Y <- scale(X)
@@ -1418,14 +1449,14 @@ With PFA, the uniquenesses are larger, but the order is still the same.
 
 The variables better explained by the factors are RAD and PTRATIO, whereass the worse ones are B and CRIM. This results are align with the conclusions that we have been obtaining through all this project.
 
-# Estimate the factor scores
+### Estimate the factor scores
 ```{r}
 F_pfa <- Y %*% solve(Sigma_nu_pfa) %*% M_pfa %*% solve(t(M_pfa) %*% solve(Sigma_nu_pfa) %*% M_pfa)
 colnames(F_pfa) <- c("Factor 1","Factor 2","Factor 3","Factor 4")
 F_pfa
 ```
 
-# See that the factors are uncorrelated
+### See that the factors are uncorrelated
 
 ```{r}
 pairs(F_pfa,pch=19,col=colors[1])
@@ -1433,14 +1464,14 @@ corrplot(cor(F_pfa),order="hclust")
 ```
 In the scatter plot we can see that now we are obtaining a perfect separation of at least two groups when the third component is added, whereas when we applied PCA the differenciation was't that clear. Also we can see that the factors are not correlated at all.
 
-# Obtain the correlation matrix between the PCFA and PFA estimates
+### Obtain the correlation matrix between the PCFA and PFA estimates
 ```{r}
 cor(F_pcfa,F_pfa)
 corrplot(cor(F_pcfa,F_pfa))
 ```
 Thus, they are very close to each other
 
-# Estimate the residuals
+### Estimate the residuals
 
 ```{r}
 Nu_pfa <- Y - F_pfa %*% t(M_pfa)
