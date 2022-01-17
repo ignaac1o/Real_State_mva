@@ -1481,5 +1481,170 @@ corrplot(cor(Nu_pfa),order="hclust")
 As before, the residuals show some minor correlation that the model is not able to explain
 
 
+## Maximum likelihood estimation
+
+The previous don't required knowledge of the underlying distribution of $\mathbf{X}$. In the case of MLE, we need to assure the data is Gaussian, therefore we assume it.
+
+Let's start with one factor
+
+```{r}
+Y_mle_1 <- factanal(X,factors=1,rotation="varimax",scores="Bartlett")
+Y_mle_1$STATISTIC
+Y_mle_1$PVAL
+```
+
+Then, two factors
+
+```{r}
+Y_mle_2 <- factanal(X,factors=2,rotation="varimax",scores="Bartlett")
+Y_mle_2$STATISTIC
+Y_mle_2$PVAL
+```
+
+Then, three factors
+
+```{r}
+Y_mle_3 <- factanal(X,factors=3,rotation="varimax",scores="Bartlett")
+Y_mle_3$STATISTIC
+Y_mle_3$PVAL
+```
+
+Then, four factors
+
+```{r}
+Y_mle_4 <- factanal(X,factors=4,rotation="varimax",scores="Bartlett")
+Y_mle_4$STATISTIC
+Y_mle_4$PVAL
+```
+
+Then, five factors
+
+```{r}
+Y_mle_5 <- factanal(X,factors=5,rotation="varimax",scores="Bartlett")
+Y_mle_5$STATISTIC
+Y_mle_5$PVAL
+```
+
+Then, six factors
+
+```{r}
+Y_mle_6 <- factanal(X,factors=6,rotation="varimax",scores="Bartlett")
+Y_mle_6$STATISTIC
+Y_mle_6$PVAL
+```
+
+Then, seven factors
+
+```{r}
+Y_mle_7 <- factanal(X,factors=7,rotation="varimax",scores="Bartlett")
+Y_mle_7$STATISTIC
+Y_mle_7$PVAL
+```
+
+The null hypothesis is always rejected, as it happened with the case of study at class. This is probably because the data is non Gaussian. Therefore, try with 4 factors as in the previous cases (in PFA).
+
+Get the loading matrix
+
+```{r}
+M_mle <- loadings(Y_mle_4)[1:p,1:r]
+M_mle
+```
+
+Compare with PFA estimates
+
+```{r}
+par(mfrow=c(2,2))
+plot(M_pfa[,1],M_mle[,1],pch=19,col=colors[1],
+     main="First factors with PFA and MLE",xlab="PFA",ylab="MLE")
+plot(M_pfa[,2],M_mle[,2],pch=19,col=colors[1],
+     main="Second factors with PFA and MLE",xlab="PFA",ylab="MLE")
+plot(M_pfa[,3],M_mle[,3],pch=19,col=colors[1],
+     main="Third factor with PFA and with MLE",xlab="PFA",ylab="MLE")
+plot(M_pfa[,4],M_mle[,4],pch=19,col=colors[1],
+     main="Fourth factor with PFA and with MLE",xlab="PFA",ylab="MLE")
+```
+
+The two estimates of the loading matrix are very similar so we do not plot the estimated weights again
+
+Estimate the covariance matrix of the errors
+
+```{r}
+Sigma_nu_mle <- diag(diag(cov(Y) - M_mle %*% t(M_mle)))
+```
+
+Compare with the estimate with the PFA method
+
+```{r}
+par(mfrow=c(1,1))
+plot(diag(Sigma_nu_pfa),diag(Sigma_nu_mle),pch=19,col=colors[1],
+     main="Noise variances with PFA and MLE", xlab="PFA",ylab="MLE")
+```
+
+There are some small differences.
+
+Communalities and uniquenesses
+
+```{r}
+comm_mle <- diag(M_mle %*% t(M_mle))
+names(comm_mle) <- colnames(Y)
+comm_mle
+sort(comm_mle,decreasing=TRUE)
+sort(comm_pfa,decreasing=TRUE)
+```
+
+Although there are small changes in the sorting, the communalities are quite close, 
+
+```{r}
+uniq_mle <- diag(Sigma_nu_mle)
+uniq_mle
+names(uniq_mle) <- names(comm_mle)
+uniq_mle
+sort(uniq_mle,decreasing=TRUE)
+sort(uniq_pfa,decreasing=TRUE)
+```
+
+As before, the uniquenesses are quite close
+
+The variables better explained by the factors are Outgoing, Tense and Quiet
+The variables worst explained by the factors are Lax, Perseverant and Approving
+
+
+Estimate the factor scores
+
+```{r}
+F_mle <- Y %*% solve(Sigma_nu_mle) %*% M_mle %*% solve(t(M_mle) %*% solve(Sigma_nu_mle) %*% M_mle)
+colnames(F_mle) <- c("Factor 1","Factor 2","Factor 3","Factor 4")
+pairs(F_mle,pch=19,col=colors[1])
+corrplot(cor(F_mle),order="hclust")
+```
+
+See that the factors are uncorrelated
+
+Obtain the correlation matrix between the PFA and MLE estimates
+
+```{r}
+cor(F_pfa,F_mle)
+corrplot(cor(F_pfa,F_mle))
+```
+
+Thus, they are very close to each other
+
+Estimate the residuals
+
+```{r}
+Nu_mle <- Y - F_mle %*% t(M_mle)
+corrplot(cor(Nu_mle),order="hclust")
+```
+
+As before, the residuals show some minor correlation that the model is not able to explain
+
+Obtain the correlation matrix between the PFA and MLE estimates
+
+```{r}
+corrplot(cor(Nu_pfa,Nu_mle))
+```
+
+Thus, they are very close to each other
+
 
 
