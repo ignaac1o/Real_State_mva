@@ -1259,7 +1259,7 @@ As we can see in the previous plot, most of the observations has not highly prob
 
 We have seen previously that the suitable number of PCA components to use was four, since they are able to explain the 89% of the variability of the data. In order to apply factor analysis to the data, we will use again only quantitative variables scaled. 
 
-Factor analysis will allow us identify if there is an association between some observable quantitative attributes and some latent unobservable variables, .i.e. the **factors**. We have to estimate matrix M and use varimax rotation in order to interpret the relationship between variables and factros. The number of factors, as we have commented, will be four. Then, varimax rotation is applied and these four factors we have selected will be analyzed.
+Factor analysis will allow us identify if there is an association between some observable quantitative attributes and some latent unobservable variables, .i.e. the **factors**. We have to estimate matrix M and use varimax rotation in order to interpret the relationship between variables and factors. The number of factors, as we have commented, will be four. Then, varimax rotation is applied and these four factors we have selected will be analyzed.
 
 ```{r}
 X_pcas <- prcomp(X)
@@ -1326,23 +1326,21 @@ It seems that there is no a clear correlation between any pair of factors. Maybe
 
 ## Principal factor analysis
 
-Obtain the sample correlation matrix of X, that is the sample covariance matrix of Y
+Another approach to understand what constructs underlie the data is principal factor analysis, this helps us to gather more information using some results from the PCFA.
+
+First of all, we have to obtain the sample correlation matrix of X, and then its eigenvectors and eigenvalues
 
 ```{r}
 R_X <- cor(X)
-```
-
-### Obtain R_X - Sigma_nu_pcfa, its eigenvectors and eigenvalues
-
-```{r}
 MM <- R_X - Sigma_nu_pcfa
 MM_eig <- eigen(MM)
 MM_values <- MM_eig$values
 MM_vectors <- MM_eig$vectors
 ```
 
-
 ### Estimate the matrix M and use the varimax rotation for interpretability
+
+Now to be able to understand the results for PFA, we are going to estimate the matrix M and use the varimax rotation again for interpretability. As you can see, the steps followed in this step are pretty similar to the ones that we have been doing for PCFA.
 
 ```{r}
 M_pfa <- MM_eig$vectors[,1:r] %*% diag(MM_eig$values[1:r])^(1/2)
@@ -1350,6 +1348,8 @@ M_pfa <- varimax(M_pfa)
 M_pfa <- loadings(M_pfa)[1:p,1:r]
 M_pfa
 ```
+
+Here we can see the weight of each feature for each PFA. Now to see if we can find different information we are going to plot it versus the results obtained for PCFA.
 
 ```{r}
 par(mfrow=c(1,2))
@@ -1389,8 +1389,7 @@ text(1:p,X_pcs$rotation[,3],labels=colnames(X),pos=1,col="black",cex=0.75)
 Nevertheless, we can see that for the third component there are slight changes between PFA and PCFA. Also, they both have change a lot compared to the PCA that we did in the second step. Notice that even thought the variable PTRATIO was very important in it, for PFA and PCFA it is not important anymore for any of the components.
 
 
-### Compare PCFA and PFA estimates of M
-
+Now we are going to compare PCFA and PFA estimates of M.
 
 ```{r}
 par(mfrow=c(2,3))
@@ -1404,27 +1403,22 @@ plot(pcfa_matrix[,4],M_pfa[,4],pch=19,col=colors[1],
      main="Fourth factors with PCFA and PFA",xlab="PCFA",ylab="PFA")
 ```
 
-Again we can see each component is very similar for the PCA and PCFA.
+Again we can see that the results obtained for each component are very similar for both PCA and PCFA. Also, we can estimate the covariance matrix for errors and compare it with the estimate of PCFA.
 
-### Estimate the covariance matrix of the errors
+
 ```{r}
 Sigma_nu_pfa <- diag(diag(R_X - M_pfa %*% t(M_pfa)))
 Sigma_nu_pfa
-```
 
-
-### Compare with the estimate with the PCFA method
-
-```{r}
 par(mfrow=c(1,1))
 plot(diag(Sigma_nu_pcfa),diag(Sigma_nu_pfa),pch=19,col=colors[1],
      main="Noise variances with PCFA and PFA",
      xlab="PCFA",ylab="PFA")
 ```
 
-There are some small differences
+As expected there are very few differences.
 
-### Communalities and uniquenesses
+Lastly, we are going to study its communalities and uniquenesses.
 
 ```{r}
 Y <- scale(X)
@@ -1437,7 +1431,6 @@ sort(comm_pcfa,decreasing=TRUE)
 
 Now, following the parameters of communalities we can see that there are a few changes in the order of the first 4 most important ones. For the PFA the RAD takes the first place. Nevertheless this changes are practically insignificant because it is just a 0.01 change.
 
-
 ```{r}
 uniq_pfa <- diag(Sigma_nu_pfa)
 names(uniq_pfa) <- names(comm_pfa)
@@ -1447,39 +1440,39 @@ sort(uniq_pcfa,decreasing=TRUE)
 
 With PFA, the uniquenesses are larger, but the order is still the same.
 
-The variables better explained by the factors are RAD and PTRATIO, whereass the worse ones are B and CRIM. This results are align with the conclusions that we have been obtaining through all this project.
+The variables better explained by the factors are RAD and PTRATIO, whereas the worse ones are B and CRIM. This results are align with the conclusions that we have been obtaining through all this project.
 
-### Estimate the factor scores
+Now, to Estimate the factor scores:
+
 ```{r}
 F_pfa <- Y %*% solve(Sigma_nu_pfa) %*% M_pfa %*% solve(t(M_pfa) %*% solve(Sigma_nu_pfa) %*% M_pfa)
 colnames(F_pfa) <- c("Factor 1","Factor 2","Factor 3","Factor 4")
-F_pfa
+pairs(F_pfa,pch=19,col=colors[1])
 ```
 
-### See that the factors are uncorrelated
+In the scatter plot we can see that now we are obtaining a perfect separation of at least two groups when the third component is added, whereas when we applied PCA the differentiation was not that clear. 
 
 ```{r}
-pairs(F_pfa,pch=19,col=colors[1])
 corrplot(cor(F_pfa),order="hclust")
 ```
-In the scatter plot we can see that now we are obtaining a perfect separation of at least two groups when the third component is added, whereas when we applied PCA the differenciation was't that clear. Also we can see that the factors are not correlated at all.
 
-### Obtain the correlation matrix between the PCFA and PFA estimates
+Within the corplot, we can see that there are totally uncorrelated between them. Also, we can check that the information given in the PCA and PCFA is very similar as they are very correlated.
+
 ```{r}
 cor(F_pcfa,F_pfa)
 corrplot(cor(F_pcfa,F_pfa))
 ```
-Thus, they are very close to each other
 
-### Estimate the residuals
+Thus, they are very close to each other. However, we can see that for 2 and 4 factors, in this case, the correlation is negative.
+
+Finally, we can estimate the residuals:
 
 ```{r}
 Nu_pfa <- Y - F_pfa %*% t(M_pfa)
 corrplot(cor(Nu_pfa),order="hclust")
 ```
 
-As before, the residuals show some minor correlation that the model is not able to explain
-
+As before, the residuals show some correlations that the model is not able to explain. We can see that it is quite strong for MEDV-RM and PTRATIO-ZN. Therefore, it is difficult to obtain the relation for these variables.
 
 ## Maximum likelihood estimation
 
