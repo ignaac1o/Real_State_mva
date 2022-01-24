@@ -6,4 +6,5 @@
 real_state*.pdf
 real_state*.log
 real_state*.html
-real_state_files/
+real_state_*_files/
+real_state_*_cache/
